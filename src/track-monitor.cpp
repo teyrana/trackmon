@@ -19,13 +19,7 @@
 
 #include <ncurses.h>
 
-
 #include "track-monitor.hpp"
-
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::string;
 
 #ifdef DEBUG
     FILE* logfile = nullptr;

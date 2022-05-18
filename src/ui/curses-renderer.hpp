@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "display-column.hpp"
-#include "core/track-cache.hpp"
+#include "track-cache.hpp"
 
 using std::string;
 

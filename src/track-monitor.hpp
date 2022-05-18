@@ -20,10 +20,9 @@
 
 #include <memory>
 
-#include "core/track-cache.hpp"
-
-#include "ui/curses-input-handler.hpp"
-#include "ui/curses-renderer.hpp"
+#include "track-cache.hpp"
+#include "curses-input-handler.hpp"
+#include "curses-renderer.hpp"
 
 class TrackMonitor {
     public:

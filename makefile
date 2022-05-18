@@ -16,6 +16,11 @@ configure:
 build: build/CMakeCache.txt
 	cd build && ninja
 
+# # install dependencies
+provision: 
+	echo 'dependency packages do not yet exist :('
+#	dnf install libais-devel
+
 clean: 
 	rm -rf build/*
 

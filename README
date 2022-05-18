@@ -35,3 +35,8 @@ within this directory:
    $ cd ..
 ```
 
+
+
+## Dependencies:
+1. `libais`: AIS parsing library
+    https://github.com/schwehr/libais
