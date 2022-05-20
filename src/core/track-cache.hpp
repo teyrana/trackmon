@@ -21,20 +21,15 @@ class TrackCache
 
         Track * const get(uint64_t id) const;
 
-        void set_origin(double latitude, double longitude);
+        void set_origin( double latitude, double longitude );
 
         size_t size() const;
 
-        bool update(const std::string_view text);
+        std::string to_string() const;
+
+        bool update( const Report& report );
 
     private:
-        double origin_latitude;
-        double origin_longitude;
-        double origin_easting;
-        double origin_northing;
-
-        PJ_CONTEXT *contextp;
-        PJ* proj;
         std::map<uint64_t, Track> index;
 
 };

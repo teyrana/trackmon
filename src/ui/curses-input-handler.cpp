@@ -5,7 +5,9 @@
 
 CursesInputHandler::CursesInputHandler(TrackCache& cache)
     : renderer(cache)
-{}
+{
+    configure();
+}
 
 void CursesInputHandler::configure(){
     // initialise Ncurses
@@ -31,59 +33,52 @@ void CursesInputHandler::configure(){
     // // in milliseconds
     // timeout(500);
 
-    fprintf(stderr, ">> Successfully initialized Curses. >>\n");
+    fprintf(stderr, "    >>> Successfully initialized Curses. >>\n");
 }
 
 bool CursesInputHandler::handle_input(){
-    const char key = getch();
+    char key = getch();
+    
     if(ERR == key){
         // technically an error, but also the return if no input is available -- 
         // i.e. this is the very common, default case
         return false;
     }
-    
-    if('q' == key || 17 == key){
+
+    if( 'q' == key ){
         // normal exit
-        // 17 == ctrl-q on OSX/Darwin/Terminal
         shutdownCurses();
         exit(0);
-    }else if(' ' == key){
-        // pause rendering
-        if(renderer.is_paused()){
-            renderer.resume();
-        }else{
-            renderer.pause();
-        }
-    }else{
-        return handle_option_key(key);
     }
-    return false;
-}
 
-bool CursesInputHandler::handle_option_key(char key){
     if(('0' <= key) && ( key <= '9')){
-        // handle_number_key
+    // ignore number keys
         return false;
     }
 
     // lowercase all capitals:
     if(('A' <= key) && ( key <= 'Z')){
-        key += ('a' - 'A');
+        key += static_cast<uint8_t>('a' - 'A');
     }
 
-    if(('a' <= key) && ( key <= 'z')){
+    if((' ' <= key) && ( key <= '}')){
+        renderer.set_key_command(key);
         switch(key){
+            case ' ':
+                renderer.toggle_pause(); break;
             case 'a':
+                break;
             case 'h':
-                renderer.set_key_command(key);
-                return true;
+                renderer.toggle_help(); break;
+            case 'p':
+                renderer.toggle_pause(); break;
             default:
-                renderer.set_key_command(key);
-                return true;
+                // no-op // debug
+                renderer.set_key_result("noop--unsupported key.", 23);
         }
+        renderer.render();
+        last_update_ = std::chrono::system_clock::now();
 
-        mvprintw(4,0, "::set key command(%c); return true; update;", key);
-        
         return true;
     }
 
@@ -97,9 +92,16 @@ void CursesInputHandler::shutdownCurses(){
     fprintf(stderr, "Program finished: shutting down NCurses.\n\n");
 }
 
-void CursesInputHandler::update(bool changed){
-    if(changed){
-        renderer.update();
-    }
+std::chrono::system_clock::time_point CursesInputHandler::update( bool changed ){
+    if( handle_input() ){
+        // noop
+    }else if(changed){
+        renderer.render();
+        last_update_ = std::chrono::system_clock::now();
+    } // else{
+    //    // noop
+    // }
+
+    return last_update_;
 }
 

@@ -4,6 +4,8 @@ project(trackmon
         VERSION 0.1.0
         LANGUAGES CXX )
 
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
+
 # ===== Find MOOS =====
 # If we can't find MOOS, just don't configure it, and disable the module
 find_package(MOOS 10.0 QUIET)
@@ -35,12 +37,16 @@ if( MOOS_INCLUDE_DIRS )  # probably wrong variable name
 
 endif()
 
-find_package(PROJ CONFIG REQUIRED)
+find_package(AIS REQUIRED)
 
 find_package(Curses REQUIRED)
-# target_link_libraries(MyApp PRIVATE PROJ::proj)
 
-set(DEPEND_LIBS PROJ::proj)
+find_package(PROJ CONFIG REQUIRED)
+# set(PROJ_LIBRARIES PROJ::proj)
+# target_link_libraries(${LIB_NAME} PRIVATE PROJ::proj)
+
+find_package(PCAP REQUIRED)
+
 
 # Linux Libraries
 SET(SYSTEM_LIBS

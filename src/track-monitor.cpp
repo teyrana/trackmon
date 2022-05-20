@@ -1,134 +1,23 @@
-//*****************************************************************************
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version
-// 2 of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be
-// useful, but WITHOUT ANY WARRANTY; without even the implied
-// warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-// PURPOSE. See the GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public
-// License along with this program; if not, write to the Free
-// Software Foundation, Inc., 59 Temple Place - Suite 330,
-// Boston, MA 02111-1307, USA.
-//*****************************************************************************
-
-#include <iterator>
+#include <chrono>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include <ncurses.h>
 
-#include "track-monitor.hpp"
+#include "core/track-cache.hpp"
+#include "connectors/file/pcap-file-connector.hpp"
+#include "connectors/file/text-file-connector.hpp"
+#include "parsers/ais/ais-parser.hpp"
 
-#ifdef DEBUG
-    FILE* logfile = nullptr;
-#endif
+#include "ui/curses-input-handler.hpp"
+#include "ui/curses-renderer.hpp"
 
+const static std::string binary_name = "trackmon";
+const static std::string binary_version = "0.0.2";
 
-//---------------------------------------------------------
-// Constructor
-
-TrackMonitor::TrackMonitor()
-    : handler(cache)
-{
-#ifdef DEBUG
-    logfile = fopen("debug.log", "w");
-#endif
-}
-
-TrackMonitor::~TrackMonitor(){
-    fprintf(stderr, "closing: TrackMonitor\n");
-#ifdef DEBUG
-    fflush(logfile);
-    fclose(logfile);
-#endif
-}
-
-//---------------------------------------------------------
-// Procedure: OnNewMail
-
-// bool TrackMonitor::OnNewMail( &NewMail)
-// {
-//     MOOSMSG_LIST::iterator p;
-//     for(p = NewMail.begin(); p!=NewMail.end(); p++) {
-//         CMOOSMsg &msg = *p;
-
-//         const string key = msg.GetKey();
-//         // fprintf(logfile, "    for: %s    from: %s\n", msg.GetKey().c_str(), msg.GetCommunity().c_str());
-//         if(("NODE_REPORT"==key) || ("NODE_REPORT_LOCAL"==key)){
-//             cache.update(msg.GetAsString());
-//         }
-//     }
-
-//     // if(changed)
-//     //     handler.update(changed);
-    
-//     return true;
-// }
-
-
-//---------------------------------------------------------
-// Procedure: OnConnectToServer
-
-// bool TrackMonitor::OnConnectToServer()
-// {
-//     // this is the only registration
-//     Register("NODE_REPORT", 0.);
-//     Register("NODE_REPORT_LOCAL", 0.);
-
-//     fprintf(stderr, "Connected to server!... Initializing Curses:\n");
-    
-//     // const double app_freq = GetAppFreq();
-//     handler.configure();//app_freq);
-
-//     // force an initial draw
-//     handler.update(true);
-
-//     return true;
-// }
-
-// //---------------------------------------------------------
-// bool TrackMonitor::Iterate()
-// {
-//     handler.handle_input();
-
-//     handler.update(true);
-
-    // unsigned int i, amt = (m_tally_recd - m_tally_sent);
-    // for(i=0; i<amt; i++) {
-    //     m_tally_sent++;
-    //     Notify(m_outgoing_var, m_tally_sent);
-    // }
-    //
-    // // If this is the first iteration just note the start time, otherwise
-    // // note the currently calculated frequency and post it to the DB.
-    // if(m_start_time_iterations == 0)
-    // m_start_time_iterations = MOOSTime();
-    // else {
-    //     double delta_time = (MOOSTime() - m_start_time_iterations) + 0.01;
-    //     double frequency  = (double)(m_iterations) / delta_time;
-    //     Notify(m_outgoing_var+"_ITER_HZ", frequency);
-    // }
-    //
-    //
-    // // If this is the first time a received msg has been noted, just
-    // // note the start time, otherwise calculate and post the frequency.
-    // if(amt > 0) {
-    //     if(m_start_time_postings == 0)
-    //     m_start_time_postings = MOOSTime();
-    //     else {
-    //         double delta_time = (MOOSTime() - m_start_time_postings) + 0.01;
-    //         double frequency = (double)(m_tally_sent) / delta_time;
-    //         Notify(m_outgoing_var+"_POST_HZ", frequency);
-    //     }
-    // }
-
-    
-    
-//     return(true);
-// }
-
+static bool run = true;
 
 // //---------------------------------------------------------
 // // Procedure: OnStartUp()
@@ -152,15 +41,120 @@ TrackMonitor::~TrackMonitor(){
 //         }else if("longorigin" == param){
 //             origin_longitude = std::atof(value.c_str());
 //             fprintf(logfile, "    LongOrigin == %g\n", origin_longitude );
-
-//         // if("apptick" == param){
-//         //     std::cerr << "AppTick == " << value << std::endl;
-//         // }else if("commstick"== param){
-//         //     std::cerr << "CommsTick == " << value << std::endl;
-
-//         }
+//
+//         ...
+//
 //         cache.set_origin(origin_latitude, origin_longitude);
 //     }
 
 //     return(true);
 // }
+
+void print_help(){
+    std::cout << "\n"
+        << "====== ====== " << binary_name << " ====== ======\n"
+        << "Synopsis\n"
+        << "-------------------------------------\n"
+        << "  This app monitors track traffic, and provides a dynamic, configurable way to inspect same.\n"
+        << "  In-app commands are displayed in the screen footer.\n"
+        << "\n"
+        << "Options:\n"
+        << "  <None>\n"
+        << "  --version,-v\n"
+        << "    Display the release version of this binary.\n"
+        << "\n";
+}
+
+int main(int argc, char *argv[]){
+    for(int i=1; i<argc; i++) {
+        std::string argi = argv[i];
+
+        if((argi == "-h") || (argi == "--help") || (argi=="-help")){
+            print_help();
+            return 0;
+        }else if((argi == "-v") || (argi == "--version")){
+            std::cout << binary_name << "    Version: " << binary_version << std::endl;
+            return 0;
+        }
+        // add more arguments here.
+    }
+
+    // ===========================================================================================
+    std::cout << ">>> .A. Creating Track Database:" << std::endl;
+    TrackCache cache;
+
+    // ===========================================================================================
+    std::cout << ">>> .B. Creating Connectors:" << std::endl;
+    
+    // const std::string ais_file = "data/ais.nmea0183.2022-05-18.log";
+    // const std::string ais_file = "data/ais.nmea0183.2022-05-19.log";
+    const std::string ais_file = "data/ais.tcpdump.2022-05-18.pcap";
+
+    std::cout << "    :> Creating File Connector to:" << ais_file << std::endl;
+    //TextFileConnector conn( ais_file );
+    PCAPFileConnector conn( ais_file );
+
+    if( ! (conn.good()) ){
+        std::cerr << "!!! Could not create all connectors\n";
+        return EXIT_FAILURE;
+    }
+
+    // ===========================================================================================
+    std::cout << ">>> .C. Creating Parsers:" << std::endl;
+    std::cout << "    :> Creating AIS Parser..." << std::endl;
+    AISParser parser;
+
+    // ===========================================================================================
+    std::cout << ">>> .D. Building UI: " << std::endl;
+    CursesInputHandler handler(cache);
+    handler.update(true);
+
+    // ===========================================================================================
+
+    // uint32_t interval_update_count;
+    // uint32_t interval_start;
+
+    using clock = std::chrono::system_clock;
+    const std::chrono::milliseconds render_blackout(20);  // wait at least this much time between render calls
+
+    auto last_render_timestamp = clock::now();
+    auto last_change_timestamp = last_render_timestamp;
+    while(run){
+        // .1. get next data chunk
+        const auto chunk = conn.next();
+        if( 0 < chunk.length ){
+            // .2. Load next chunk into parser
+            parser.load( chunk.timestamp, chunk.buffer, chunk.length );
+
+            // .3. Drain reports from each parser
+            const Report* report = parser.parse();
+            while( report ){
+                // Update cache
+                last_change_timestamp = clock::now();
+                cache.update( *report );
+                // Pull next report
+                report = parser.parse();
+            }
+        }
+
+        bool pending_changes = false;
+        // (a) check if any update exists since the last render...
+        if( last_render_timestamp < last_change_timestamp ){
+            auto render_age = clock::now() - last_render_timestamp;
+            if( render_blackout < render_age ){
+                pending_changes = true;
+            }
+        }
+        // last_change_timestamp = std::chrono::system_clock::now();
+        //     auto current_timestamp = std::chrono::system_clock::now();
+
+
+        last_render_timestamp = handler.update( pending_changes );
+        sleep(0.01);
+    }
+
+    std::cout << cache.to_string() << std::endl;
+
+    return EXIT_SUCCESS;
+}
+

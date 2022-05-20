@@ -1,4 +1,6 @@
+#include <cassert>
 #include <chrono>
+#include <cstring>
 
 #include <ncurses.h>
 #include <signal.h>
@@ -23,19 +25,24 @@ void resizeHandler(int sig)
 
 CursesRenderer::CursesRenderer(TrackCache& _cache)
     : cache(_cache)
-    , command(' ')
-    , paused(false)
+    , command_key(' ')
+    , command_result("\0")
+    , render_live(true)
+    , render_help(true)
 {
     // SIGWINCH ~= SIGnal-WINdow-CHange
     signal(SIGWINCH, resizeHandler);
 
     // columns.emplace(? "Source", 
-    columns.emplace_back("ID", "Id", "%lX", 20);
-    //columns.emplace_back("TIME", "Time", "%g", 12);
+    columns.emplace_back("ID", "Id", "%ld", 20);
+    // columns.emplace_back("TIME", "Time", "%g", 12);
     columns.emplace_back("AGE", "Time", "%+9.8g", 12);
     columns.emplace_back("NAME", "Name", "%-20s", 20);
-    columns.emplace_back("X", "X", "%+9.2g", 10);
-    columns.emplace_back("Y", "Y", "%+9.2g", 10);
+    //columns.emplace_back("X", "X", "%+9.2g", 10);
+    //columns.emplace_back("Y", "Y", "%+9.2g", 10);
+
+    columns.emplace_back("LAT", "Latitude", "%+9.2g", 10);
+    columns.emplace_back("LON", "Longitude", "%+9.2g", 10);
     
     // mvprintw(0,0,"Source             Time                Name        X / Y            Latitude / Longitude    ");
 }
@@ -43,20 +50,9 @@ CursesRenderer::CursesRenderer(TrackCache& _cache)
 void CursesRenderer::configure(){
 }
 
-
-bool CursesRenderer::is_paused() const {
-    return paused;
+bool CursesRenderer::paused() const {
+    return not render_live;
 }
-
-void CursesRenderer::pause() {
-    paused = true;
-}
-
-void CursesRenderer::resume() {
-    paused = false;
-}
-
-
 
 void CursesRenderer::render_command(){
     // if(hotKeyMode){
@@ -65,29 +61,39 @@ void CursesRenderer::render_command(){
     //     printw("\n");
     // }else{
     const int status_render_line = LINES + status_line_offset;
-    mvprintw(status_render_line, 0, "command:%c: <result>", command );
+    mvprintw(status_render_line, 0, "command:(%c)::  %s", command_key, command_result );
     // }
     return;
 }
 
 void CursesRenderer::render_options(){
-    {  // upper option line:
-        mvprintw(LINES + option_upper_line_offset, 0, "==== ");
+    if( render_help ){
+        // upper option line:
+        mvprintw(LINES + option_upper_line_offset, 0, "(p)ause");
 
-    }{ // lower option line:
-        mvprintw(LINES + option_lower_line_offset, 0, "==== ");
+        // lower option line:
+        mvprintw(LINES + option_lower_line_offset, 0, "(h)elp    (q)uit ");
     }
 }
 
 void CursesRenderer::render_status_bar(){
-    move(LINES + footer_line_offset,0);
+    if( render_help ){
+        move(LINES + footer_expand_line_offset, 0);
+    }else{
+        move(LINES + footer_minimal_line_offset, 0);
+    }
 
     attron(A_REVERSE);
     {
-        // chunks of 12
+        // chunks of 12 '=' characters
+        if( render_live ){
+            printw("[ >> ]");
+        }else{
+            printw("[ || ]");
+        }
         printw("============ ============ ");
         printw("============ ============ ");
-        printw("==== %4d/%4d Tracks ==== ", (int)1, (int)1);
+        printw("==== %4d/%4d Tracks ==== ", (int)0, (int)cache.size());
     }
     attroff(A_REVERSE);
     return;
@@ -123,7 +129,7 @@ void CursesRenderer::render_column_headers(){
 }
 
 void CursesRenderer::render_column_contents(){
-    std::time_t current_time = std::time(nullptr);
+    auto current_time = std::chrono::system_clock::now();
 
     if(0 == cache.size()){
         // dummy / placeholder
@@ -134,23 +140,27 @@ void CursesRenderer::render_column_contents(){
             const uint64_t id = iter->first;
             const Track& track = iter->second;
             
-            const Report * const report = track.last_report.get();
+            const Report& report = track.last_report;
 
             int col = 0;
             for( DisplayColumn& disp : columns ){
                 if("AGE" == disp.key){
-                    const double age = current_time - report->timestamp;
+                    const auto age = current_time - std::chrono::microseconds(report.timestamp);
                     mvprintw( row, col, disp.format.c_str(), age);
                 }else if("TIME" == disp.key){
-                    mvprintw( row, col, disp.format.c_str(), report->timestamp);
+                    mvprintw( row, col, disp.format.c_str(), report.timestamp);
                 }else if("ID" == disp.key){
                     mvprintw( row, col, disp.format.c_str(), id);
-                }else if("NAME" == disp.key){
-                    mvprintw( row, col, disp.format.c_str(), track.name.c_str());
-                }else if("X" == disp.key){
-                    mvprintw( row, col, disp.format.c_str(), report->x);
-                }else if("Y" == disp.key){
-                    mvprintw( row, col, disp.format.c_str(), report->y);
+                // }else if("NAME" == disp.key){
+                // mvprintw( row, col, disp.format.c_str(), track.name.c_str());
+                }else if("LAT" == disp.key){
+                    mvprintw( row, col, disp.format.c_str(), report.latitude);
+                }else if("LON" == disp.key){
+                mvprintw( row, col, disp.format.c_str(), report.longitude);
+                // }else if("X" == disp.key){
+                //     mvprintw( row, col, disp.format.c_str(), report.x);
+                // }else if("Y" == disp.key){
+                //     mvprintw( row, col, disp.format.c_str(), report.y);
                 }
                 
                 col += disp.width;
@@ -162,21 +172,47 @@ void CursesRenderer::render_column_contents(){
     return;
 }
 
-
-void CursesRenderer::set_key_command(const char _command){
-    command = _command;
+bool CursesRenderer::toggle_pause(){
+    if( render_live ){
+        std::memcpy( command_result, "Pause Track Updates.", 21 );
+        render_live = false;
+    }else{
+        std::memcpy( command_result, "Resume Track Updates.", 22 );
+        render_live = true;
+    }
+    return render_live;
 }
 
-void CursesRenderer::update(){
-    if(paused)
-        return;
+bool CursesRenderer::toggle_help(){
+    if( render_help ){
+        std::memcpy( command_result, "Hiding command help.", 21 );
+        render_help = false;
+    }else{
+        std::memcpy( command_result, "Showing command help.", 22 );
+        render_help = true;
+    }
+    return render_help;
+}
 
+void CursesRenderer::set_key_command(const char _command) {
+    command_key = _command;
+}
+
+void CursesRenderer::set_key_result(const char* _result, size_t length ){
+    assert( length < CursesRenderer::command_result_buffer_length );
+    memcpy( this->command_result, _result, length );
+}
+
+void CursesRenderer::render(){
     clear();
 
+    // header
     render_column_headers();
 
     // render the columns themselves
+    // if( render_live ){
     render_column_contents();
+    // }
 
     // footer
     render_status_bar();

@@ -10,19 +10,20 @@ using std::uint32_t;
 
 class Report;
 
-class Track
-{
-    public:
-        Track() = delete;
-        Track(const std::string& _name, uint64_t uuid);
-        Track(const Track& other);
-        ~Track() = default;
+class Track{
+public:
+    Track() = delete;
+    Track(uint64_t uuid);
+    Track(const Track& other);
+    ~Track() = default;
 
-        void update(std::unique_ptr<Report> _report);
+    std::string str() const;
 
-        const std::string name;
-        const uint64_t id;
-
-        unique_ptr<Report> last_report;
-
+    void update( const Report& _report );
+    
+    //const std::string name;
+    const uint64_t id;
+    
+    Report last_report;
+    
 };

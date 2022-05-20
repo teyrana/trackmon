@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <string>
 // #include <memory>
 
@@ -14,20 +15,20 @@ class CursesInputHandler
         
         CursesInputHandler(TrackCache& cache);
 
-        void configure();
-
         ~CursesInputHandler() =  default;
 
-        bool handle_input();
-        
-        void update(bool changed);
+        std::chrono::system_clock::time_point update( bool changed );
+
 
     private:
-        bool handle_option_key(const char key);
-        
+        void configure();
+
+        bool handle_input();
+
         void shutdownCurses();
 
     private:
         CursesRenderer renderer;
+        std::chrono::system_clock::time_point last_update_;
 
 };

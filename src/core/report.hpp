@@ -1,37 +1,48 @@
 #pragma once
 
-#include <proj.h>
+#include <cmath>
 
-#include <memory>
 
 class Report {
 public:
-    static std::unique_ptr<Report> make(const std::string_view text, PJ* proj, 
-                                        double origin_offset_easting, double origin_offset_northing);
-    
-    Report() = delete;
+    Report() = default;
     Report(std::string _name, uint64_t _id, double _ts,
                 double _x, double _y, double _heading,
                 double _course, double _speed);
     ~Report() = default;
 
+    Report& operator=( const Report& other );
+
 // metadata
-    const std::string name;
-    const uint64_t id;
-    const double timestamp;
+public:
+    std::string name;
+    uint64_t id = 0; // 0 => error value
+    uint64_t timestamp = 0; // time in usec
+    enum SOURCE_SENSOR {
+        AIS, FUSION, INFRARED, MANUAL, RADAR, RADIO, UNKNOWN, VISUAL, 
+    };
+    SOURCE_SENSOR source = UNKNOWN;
+
+    // see: https://github.com/schwehr/libais/blob/master/ais/lut.py#L5
+    // 15 === 'undefined' navigation status, according to AIS spec
+    int status = 15;
 
 // position / orientation
-    const double x;  // meters to the right of the origin 
-    const double y;  // meters upwards from the origin
-    /// /brief degrees CW from true north
-    const double heading;
+public:
+    double latitude = NAN;
+    double longitude = NAN;
+    double x = NAN;  // meters to the right of the origin 
+    double y = NAN;  // meters upwards from the origin
+
+
 
 // velocity
-    /// /brief degrees CW from true north
-    const double course;
-    const double speed;
-
-private:
-    static const std::hash<std::string> hasher;
+public:
+    /// \brief degrees CW from true north
+    double heading = NAN;
+    /// \brief degrees CW from true north
+    double course = NAN;
+    /// \brief meters-per-second along course
+    double speed = NAN;
 
 };
