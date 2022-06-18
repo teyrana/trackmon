@@ -6,7 +6,7 @@
 #include "MBUtils.h"
 #endif
 
-// #include "track-monitor.hpp"
+
 #include "core/track-cache.hpp"
 #include "connectors/file/pcap-file-connector.hpp"
 #include "connectors/file/text-file-connector.hpp"
@@ -67,6 +67,11 @@ int main(int argc, char *argv[]){
     std::cout << ">>> .A. Creating Track Database:" << std::endl;
     TrackCache cache;
 
+    // DEBUG 
+    cache.set_origin( 29.712372, -91.880144 );  // Origin for AIS Data
+    // cache.set_origin(42.357591,-71.082075);  // middle of Charles River Basin
+    // cache.transform_to_utm(true);
+
     // ===========================================================================================
     std::cout << ">>> .B. Creating Connectors:" << std::endl;
     
@@ -90,7 +95,7 @@ int main(int argc, char *argv[]){
     AISParser parser;
 
     // ===========================================================================================
-    std::cout << ">>> .D. Starting Main-Loop:\n"
+    std::cout << ">>> .D. Ingest Updates:\n"
               << "    ...." << std::endl;
 
     uint32_t iteration_number = 0;
@@ -110,7 +115,7 @@ int main(int argc, char *argv[]){
         parser.load( chunk.timestamp, chunk.buffer, chunk.length );
 
         // .3. Pull reports out of parser until drained
-        const Report* report = parser.parse();
+        Report* report = parser.parse();
         while( report ){
             // Update cache
             cache.update( *report );

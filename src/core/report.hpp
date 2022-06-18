@@ -31,9 +31,8 @@ public:
 public:
     double latitude = NAN;
     double longitude = NAN;
-    double x = NAN;  // meters to the right of the origin 
-    double y = NAN;  // meters upwards from the origin
-
+    double easting = NAN;  // meters to the right of the origin 
+    double northing = NAN;  // meters upwards from the origin
 
 
 // velocity

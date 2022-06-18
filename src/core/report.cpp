@@ -16,7 +16,7 @@ Report::Report( std::string _name, uint64_t _id, double _ts,
                 double _course, double _speed)
     : name(_name), id(_id), timestamp(_ts)
     //, latitude(NAN), longitude(NAN)
-    , x(_x), y(_y)
+    , easting(_x), northing(_y)
     , heading(_heading), course(_course), speed(_speed)
 {}
 
@@ -43,9 +43,9 @@ Report& Report::operator=( const Report& other ){
         latitude = other.latitude;
         longitude = other.longitude;
     }
-    if( ! std::isnan(other.x) ){
-        x = other.x;
-        y = other.y;
+    if( ! std::isnan(other.easting) ){
+        easting = other.easting;
+        northing = other.northing;
     }
     
     if( ! std::isnan(other.heading) ){

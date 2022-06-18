@@ -22,6 +22,8 @@ void Track::update( const Report& _report ){
 
 std::string Track::str() const { 
    std::ostringstream buf;
-    buf << "[" << id << "]  => :: {" << last_report.latitude << " N Lat, " << last_report.longitude << " E Lon }";
+    buf << "[" << id << "]  =>";
+    buf << " @ {" << last_report.latitude << " N Lat, " << last_report.longitude << " E Lon }";
+    buf << " // {" << last_report.easting << " Eas, " << last_report.northing << " Nor }";
     return buf.str();
 }

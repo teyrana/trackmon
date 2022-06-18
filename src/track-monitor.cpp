@@ -127,7 +127,7 @@ int main(int argc, char *argv[]){
             parser.load( chunk.timestamp, chunk.buffer, chunk.length );
 
             // .3. Drain reports from each parser
-            const Report* report = parser.parse();
+            Report* report = parser.parse();
             while( report ){
                 // Update cache
                 last_change_timestamp = clock::now();

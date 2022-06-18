@@ -42,8 +42,6 @@ find_package(AIS REQUIRED)
 find_package(Curses REQUIRED)
 
 find_package(PROJ CONFIG REQUIRED)
-# set(PROJ_LIBRARIES PROJ::proj)
-# target_link_libraries(${LIB_NAME} PRIVATE PROJ::proj)
 
 find_package(PCAP REQUIRED)
 

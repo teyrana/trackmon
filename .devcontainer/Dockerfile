@@ -6,9 +6,10 @@ ARG USER_NAME=vscode
 ARG USER_UID=1001
 ARG USER_GID=$USER_UID
 RUN useradd $USER_NAME
+RUN echo "${USER_NAME}:${USER_NAME}" | chpasswd
 RUN if [ "$USER_GID" != "1000" ] || [ "$USER_UID" != "1000" ]; then \
     groupmod --gid $USER_GID $USER_NAME \
-    && usermod --uid $USER_UID --gid $USER_GID $USER_NAME \
+    && usermod --uid $USER_UID --gid $USER_GID --group=wheel $USER_NAME \
     && chown -R $USER_UID:$USER_GID /home/$USER_NAME; \
 fi
 
@@ -22,6 +23,7 @@ RUN dnf makecache \
         gcc-c++ \
         gdb \
         git \
+        proj-devel \
         ninja-build \
         tar \
         valgrind \
