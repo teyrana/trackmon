@@ -7,9 +7,10 @@
 #include <ncurses.h>
 
 #include "core/track-cache.hpp"
-#include "readers/nmea-0183/pcap-log-reader.hpp"
-#include "readers/nmea-0183/text-log-reader.hpp"
-#include "parsers/ais/ais-parser.hpp"
+#include "readers/pcap/log-reader.hpp"
+//#include "parserss/nmea-0183/text-log-reader.hpp"
+#include "parsers/nmea0183/packet-parser.hpp"
+#include "parsers/ais/parser.hpp"
 
 #include "ui/curses-input-handler.hpp"
 #include "ui/curses-renderer.hpp"
@@ -88,12 +89,12 @@ int main(int argc, char *argv[]){
     
     // const std::string ais_file = "data/ais.nmea0183.2022-05-18.log";
     // const std::string ais_file = "data/ais.nmea0183.2022-05-19.log";
+    // std::cout << "    :> Creating File Connector to:" << ais_file << std::endl;
+    // TextLogReader reader( ais_file );
+
     const std::string ais_file = "data/ais.tcpdump.2022-05-18.pcap";
-
     std::cout << "    :> Creating File Connector to:" << ais_file << std::endl;
-    //TextLogReader reader( ais_file );
-    readers::NMEA0183::PCAPLogReader reader( ais_file );
-
+    readers::pcap::LogReader reader( ais_file );
     if( ! (reader.good()) ){
         std::cerr << "!!! Could not create all connectors\n";
         return EXIT_FAILURE;
@@ -102,7 +103,8 @@ int main(int argc, char *argv[]){
     // ===========================================================================================
     std::cout << ">>> .C. Creating Parsers:" << std::endl;
     std::cout << "    :> Creating AIS Parser..." << std::endl;
-    parsers::AIS::AISParser parser;
+    parsers::nmea0183::PacketParser nmea_parser;
+    parsers::ais::Parser ais_parser;
 
     // ===========================================================================================
     std::cout << ">>> .D. Building UI: " << std::endl;
@@ -123,18 +125,17 @@ int main(int argc, char *argv[]){
         // .1. get next data chunk
         const auto chunk = reader.next();
         if( 0 < chunk.length ){
-            // .2. Load next chunk into parser
-            parser.load( chunk.timestamp, chunk.buffer, chunk.length );
-
-            // .3. Drain reports from each parser
-            Report* report = parser.parse();
-            while( report ){
-                // Update cache
-                last_change_timestamp = clock::now();
-                cache.update( *report );
-                // Pull next report
-                report = parser.parse();
-            }
+            // // .2. Load next chunk into parser
+            // parser.load( chunk.timestamp, chunk.buffer, chunk.length );
+            // // .3. Drain reports from each parser
+            //Report* report = parser.parse();
+            // while( report ){
+            //     // Update cache
+            //     last_change_timestamp = clock::now();
+            //     cache.update( *report );
+            //     // Pull next report
+            //     report = parser.parse();
+            // }
         }
 
         bool pending_changes = false;

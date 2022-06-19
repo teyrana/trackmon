@@ -2,15 +2,14 @@
 #include <string>
 #include <vector>
 
-#ifdef ENABLE_MOOS_IVP
-#include "MBUtils.h"
-#endif
-
 // 1st Party includes
 #include "core/track-cache.hpp"
-#include "readers/nmea-0183/pcap-log-reader.hpp"
-#include "readers/nmea-0183/text-log-reader.hpp"
-#include "parsers/ais/ais-parser.hpp"
+#include "readers/pcap/log-reader.hpp"
+// #include "readers/nmea0183/text-log-reader.hpp"
+#include "parsers/ais/parser.hpp"
+// #include "parsers/moos/moos-node-report-parser.hpp"
+// #include "readers/moos/moos-packet-reader.hpp"
+#include "parsers/nmea0183/packet-parser.hpp"
 
 const static std::string binary_name = "trackmon";
 const static std::string binary_version = "0.0.1";
@@ -26,7 +25,7 @@ void print_help(){
         << "Options:\n"
         << "  <None>\n"
         << "  --version,-v\n"
-    << "    Display the release version of this binary.\n"
+        << "    Display the release version of this binary.\n"
         << "\n";
 }
 
@@ -42,26 +41,8 @@ int main(int argc, char *argv[]){
             return 0;
         }
         // add more arguments here.
-
-#ifdef ENABLE_MOOS
-        }else if(strEnds(argi, ".moos") || strEnds(argi, ".moos++")){
-            mission_file = argi;
-        }else if(i==2){
-            run_command = argi;
-        }
-
-        if(mission_file == ""){
-            showHelpAndExit();
-        }
-#endif
     }
 
-
-#ifdef ENABLE_MOOS
-    TrackMonitor monitor; 
-    monitor.Run(run_command.c_str(), mission_file.c_str());
-    fprintf(stderr, "MOOS Client Finished.\n");
-#endif
 
     // ===========================================================================================
     std::cout << ">>> .A. Creating Track Database:" << std::endl;
@@ -75,12 +56,13 @@ int main(int argc, char *argv[]){
     // ===========================================================================================
     std::cout << ">>> .B. Creating Connectors:" << std::endl;
     
-    // const std::string ais_file = "data/ais.nmea0183.2022-05-18.log";
-    // const std::string ais_file = "data/ais.nmea0183.2022-05-19.log";
-    const std::string ais_file = "data/ais.tcpdump.2022-05-18.pcap";
+    // // const std::string ais_file = "data/ais.nmea0183.2022-05-18.log";
+    // // const std::string ais_file = "data/ais.nmea0183.2022-05-19.log";
+    const std::string input_pcap_file = "data/ais.tcpdump.2022-05-18.pcap";
+    // const std::string input_pcap_file = "data/m2_berta.moos.pcap";
 
-    std::cout << "    >> Creating File Connector to:" << ais_file << std::endl;
-    readers::NMEA0183::PCAPLogReader reader( ais_file );
+    std::cout << "    >> Creating File Connector to:" << input_pcap_file << std::endl;
+    readers::pcap::LogReader reader( input_pcap_file );
 
     if( ! (reader.good()) ){
         std::cerr << "!!! Could not create all connectors\n";
@@ -90,8 +72,8 @@ int main(int argc, char *argv[]){
     // ===========================================================================================
     std::cout << ">>> .C. Creating Parsers:" << std::endl;
     std::cout << "    >> Creating AIS Parser..." << std::endl;
-
-    parsers::AIS::AISParser parser;
+    parsers::nmea0183::PacketParser nmea_parser;
+    parsers::ais::Parser ais_parser;
 
     // ===========================================================================================
     std::cout << ">>> .D. Ingest Updates:\n"
@@ -100,28 +82,38 @@ int main(int argc, char *argv[]){
     uint32_t iteration_number = 0;
     const uint32_t iteration_limit = 0;  // 0 => disable limit
     uint32_t update_count = 0;
-    while( (0 == iteration_limit) || (iteration_limit < iteration_number) ){
-
+    while( (0 == iteration_limit) || ( iteration_number < iteration_limit ) ){
+        // fprintf( stderr, "    @ %03u\n", iteration_number );
+        
         // .1. get next data chunk
         const auto chunk = reader.next();
         if( 0 == chunk.length ){
-            std::cout << "    (EOF)" << std::endl;
-            break;
-            // continue;
+            if( not reader.good() ){
+                std::cout << "    <<< EOF" << std::endl;
+                break;
+            } 
+            std::cout << "    <read failure>" << std::endl;
+            continue;
         }
 
         // .2. Load next chunk into parser
-        parser.load( chunk.timestamp, chunk.buffer, chunk.length );
+        // TODO: make this more functional
+        nmea_parser.load( &chunk );
 
-        // .3. Pull reports out of parser until drained
-        Report* report = parser.parse();
-        while( report ){
-            // Update cache
-            cache.update( *report );
-            ++update_count;
+        // .3. Pull NMEA-0183 lines out of chunk, until empty
+        while( ! nmea_parser.empty() ){
+            const std::string line = nmea_parser.next();
+            if( line.empty() ){
+                break;
+            }
+            // std::cerr << "        <<< line:    (" << line.size() << "): " << line << std::endl;
 
-            // Pull next report
-            report = parser.parse();
+            // .3. Pull reports out of parser until drained
+            Report* report = ais_parser.parse( chunk.timestamp, line );
+            if( report ){
+                cache.update( *report );
+                ++update_count;
+            }
         }
 
         ++iteration_number;

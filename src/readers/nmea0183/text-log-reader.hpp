@@ -5,7 +5,7 @@
 #include <string>
 
 namespace readers {
-namespace NMEA0183 {
+namespace nmea0183 {
 
 /// \brief simple file connector that reads a line-at-time from each input file
 class TextLogReader {
@@ -29,5 +29,5 @@ private:
 };
 
 
-}  // namespace NMEA0183
+}  // namespace nmea0183
 }  // namespace readers

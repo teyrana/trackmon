@@ -7,7 +7,7 @@
 #include <ais.h>
 
 // 1st party includes
-#include "ais-parser.hpp"
+#include "parser.hpp"
 
 
 // vvvv monkey-patch
@@ -18,80 +18,26 @@ std::unique_ptr<AisMsg> CreateAisMsg(const string &body, const int fill_bits);
 // ^^^^ monkey-patch
 
 namespace parsers {
-namespace AIS {
+namespace ais {
 
 // ===============================================================================
-
-// uint8_t* find_byte( uint8_t* start, uint8_t* end, const uint8_t value ){
-//     for( const uint8_t* cur = start; cur < end; ++cur ){
-// 	if( value == *cur ){
-// 	    return cur;
-// 	}
-//     }
-//     return nullptr;
-// }
-
-const uint8_t* find_byte( const uint8_t* start, const uint8_t* end, const uint8_t value ){
-    for( const uint8_t* cur = start; cur < end; ++cur ){
-        if( value == *cur ){
-            return cur;
-        }
-    }
-    return nullptr;
-}
 
 void print_bytes( const char* prefix, const uint8_t* data ) {
     printf( "%s  %02X%02X%02X%02X  %02X%02X%02X%02X", prefix, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7] );
 }
 
-bool AISParser::load( uint64_t timestamp, uint8_t* _buffer, size_t length ) {
-
-    timestamp_ = timestamp;
-    data_start_ = _buffer;
-    data_cursor_ = data_start_;
-    data_end_ = data_start_ + length;
-
-    // DEBUG
-    // fprintf( stderr, ">>> Loaded @%16lu.%06lu |%lu|\n", timestamp_/1'000'000, timestamp_%1'000'000, std::get<2>(chunk) );
-
-    return true;
-}
-
-Report* AISParser::parse() {
-
-    // note: the early hot-path-early-exit
-    while( data_cursor_ < data_end_ ){
-        const uint8_t * line_start = find_byte( data_cursor_, data_end_, '!');
-        if( nullptr == line_start ){
-            break;
-        }
-
-        const uint8_t * line_end = find_byte(line_start, data_end_, '\r');
-        if( nullptr == line_end ){
-            break;
-        }
-
-        // Ignore sentence if it's too short to contain data
-        if( (line_end - line_start) < 12 ){
-            std::cerr << "!!!! line is too short to process!!\n";
-            return nullptr;
-        }
-        
-        // .2.A. Process all sentences from this packet
-        const std::string line( reinterpret_cast<const char*>(line_start), (line_end - line_start) );
-            
-        data_cursor_ = ((uint8_t*)line_end + 2);
-        
-        // // .3.B. Pass sentence to nmea parser
-        export_.timestamp = timestamp_;
-        return parse_nmea_sentence( line );
+Report* Parser::parse( uint64_t timestamp, const std::string& line ) {
+    if( '!' != line[0] ){
+        return nullptr;
     }
 
-    data_cursor_ = data_end_;
-    return nullptr;
+    export_.timestamp = timestamp;
+
+    // // .3.B. Pass sentence to nmea parser
+    return parse_nmea_sentence( line );
 }
 
-Report* AISParser::parse_nmea_sentence( const std::string& sentence ){
+Report* Parser::parse_nmea_sentence( const std::string& sentence ){
 
     // const bool is_ownship = ('O'==line.at(5)); // correct, but unused
     // const char ownship_flag = sentence.at(5);
@@ -193,5 +139,5 @@ Report* AISParser::parse_nmea_sentence( const std::string& sentence ){
 }
 
 
-}  // namespace AIS
+}  // namespace ais
 }  // namespace parsers

@@ -7,17 +7,15 @@
 #include "core/report.hpp"
 
 namespace parsers {
-namespace AIS {
+namespace ais {
 
 /// \brief parse each AIS message from the linked connector
 
-class AISParser {
+class Parser {
 public:
-    AISParser() = default;
+    Parser() = default;
 
-    bool load( uint64_t timestamp, uint8_t* buffer, size_t length );
-
-    Report* parse();
+    Report* parse( uint64_t timestamp, const std::string& line );
 
 private:
 
@@ -36,14 +34,9 @@ private:
     Report* parse_nmea_sentence( const std::string& sentence );
 
 private:
-    uint64_t timestamp_ = 0;
-    uint8_t* data_start_ = nullptr;
-    uint8_t* data_cursor_ = nullptr;
-    uint8_t* data_end_ = nullptr;
-
     Report export_;
 
 };
 
-}  // namespace AIS
+}  // namespace ais
 }  // namespace parsers

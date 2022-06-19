@@ -4,7 +4,7 @@
 #include "text-log-reader.hpp"
 
 namespace readers {
-namespace NMEA0183 {
+namespace nmea0183 {
 
 TextLogReader::TextLogReader( const std::string& filename ){
     open(filename);
@@ -36,5 +36,5 @@ const std::string* TextLogReader::next() {
     return nullptr;
 }
 
+}  // namespace nmea0183
 }  // namespace readers
-}  // namespace NMEA0183

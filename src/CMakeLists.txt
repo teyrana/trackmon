@@ -10,19 +10,18 @@ INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src )
 
 # ====== Reader Libraries ======
 
-## ====== NMEA-0183 Reader Library ======
-SET(NMEA_0183_READER_LIB_NAME "${BASE_NAME}-nmea-0183-connectors")
-SET(NMEA_0183_READER_SOURCES
-    ${CMAKE_SOURCE_DIR}/src/readers/nmea-0183/pcap-log-reader.cpp
-    ${CMAKE_SOURCE_DIR}/src/readers/nmea-0183/pcap-log-reader.hpp
-    ${CMAKE_SOURCE_DIR}/src/readers/nmea-0183/text-log-reader.cpp
-    ${CMAKE_SOURCE_DIR}/src/readers/nmea-0183/text-log-reader.hpp
+## ====== PCAP Reader Library ======
+SET(PCAP_READER_LIB_NAME "${BASE_NAME}-pcap-readers")
+SET(PCAP_READER_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/readers/pcap/frame-buffer.hpp
+    ${CMAKE_SOURCE_DIR}/src/readers/pcap/log-reader.cpp
+    ${CMAKE_SOURCE_DIR}/src/readers/pcap/log-reader.hpp
 )
-ADD_LIBRARY(${NMEA_0183_READER_LIB_NAME} STATIC ${NMEA_0183_READER_SOURCES})
-TARGET_LINK_LIBRARIES(${NMEA_0183_READER_LIB_NAME} PRIVATE
+ADD_LIBRARY(${PCAP_READER_LIB_NAME} STATIC ${PCAP_READER_SOURCES})
+TARGET_LINK_LIBRARIES(${PCAP_READER_LIB_NAME} PRIVATE
                             ${SYSTEM_LIBS}
                             ${PCAP_LIBRARIES} )
-LIST( APPEND READER_LIBS ${NMEA_0183_READER_LIB_NAME} )
+LIST( APPEND READER_LIBS ${PCAP_READER_LIB_NAME} )
 
 # ====== Core Library ======
 SET(CORE_LIB_NAME "${BASE_NAME}-core")
@@ -43,13 +42,29 @@ SET( CORE_LIBS ${CORE_LIB_NAME} )
 ## ====== AIS Parser Library ======
 SET(AIS_PARSE_LIB_NAME "${BASE_NAME}-ais-parser")
 SET(AIS_PARSE_SOURCES
-    ${CMAKE_SOURCE_DIR}/src/parsers/ais/ais-parser.cpp
+    ${CMAKE_SOURCE_DIR}/src/parsers/ais/parser.cpp
+    ${CMAKE_SOURCE_DIR}/src/parsers/ais/parser.hpp
 )
 ADD_LIBRARY(${AIS_PARSE_LIB_NAME} STATIC ${AIS_PARSE_SOURCES})
 TARGET_LINK_LIBRARIES(${AIS_PARSE_LIB_NAME} PRIVATE
                             ${AIS_LIBRARY}
                             ${SYSTEM_LIBS} )
 LIST( APPEND PARSER_LIBS ${AIS_PARSE_LIB_NAME} )
+
+## ====== NMEA-0183 Parser Library ======
+SET(NMEA_0183_PARSER_LIB_NAME "${BASE_NAME}-nmea-0183-parser")
+SET(NMEA_0183_PARSER_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/parsers/nmea0183/packet-parser.cpp
+    ${CMAKE_SOURCE_DIR}/src/parsers/nmea0183/packet-parser.hpp
+    # ${CMAKE_SOURCE_DIR}/src/parsers/nmea0183/text-log-reader.cpp
+    # ${CMAKE_SOURCE_DIR}/src/parsers/nmea0183/text-log-reader.hpp
+)
+ADD_LIBRARY(${NMEA_0183_PARSER_LIB_NAME} STATIC ${NMEA_0183_PARSER_SOURCES})
+TARGET_LINK_LIBRARIES(${NMEA_0183_PARSER_LIB_NAME} PRIVATE
+                            ${SYSTEM_LIBS}
+                            ${PCAP_LIBRARIES} )
+LIST( APPEND PARSER_LIBS ${NMEA_0183_PARSER_LIB_NAME} )
+
 
 # ====== UI Library ======
 SET(UI_LIB_NAME "${BASE_NAME}-ui")

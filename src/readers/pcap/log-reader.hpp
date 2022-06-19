@@ -1,28 +1,24 @@
 #pragma once
 
-#include <array>
 #include <string>
 #include <tuple>
 
-
+// needed for certain handles, in class properties
 #include <pcap/pcap.h>
 
+#include "frame-buffer.hpp"
+
 namespace readers {
-namespace NMEA0183 {
+namespace pcap {
 
 /// \brief binary connector that reads .pcap (packet capture) files
 ///
 /// References:
 ///   - https://www.tcpdump.org/manpages/pcap.3pcap.html
-class PCAPLogReader {
+class LogReader {
 public:
-    struct FrameBuffer {
-        uint64_t timestamp;
-        uint8_t* buffer;
-        size_t length;
-    };
 
-    PCAPLogReader( const std::string& filename );
+    LogReader( const std::string& filename );
     
     bool good() const;
 
@@ -38,8 +34,9 @@ public:
     uint64_t timestamp() const;
 
 private:
+    int datalink_layer_type_;
+    bool eof;
     pcap_t* pcap_handle_;
-    pcap_pkthdr frame_header_;
 
     FrameBuffer cache;
 
