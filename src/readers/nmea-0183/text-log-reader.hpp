@@ -4,11 +4,14 @@
 #include <streambuf>
 #include <string>
 
+namespace readers {
+namespace NMEA0183 {
+
 /// \brief simple file connector that reads a line-at-time from each input file
-class TextFileConnector {
+class TextLogReader {
 public:
 
-    TextFileConnector( const std::string& filename );
+    TextLogReader( const std::string& filename );
 
     bool good() const;
 
@@ -24,3 +27,7 @@ private:
 
     std::ifstream _source;
 };
+
+
+}  // namespace NMEA0183
+}  // namespace readers

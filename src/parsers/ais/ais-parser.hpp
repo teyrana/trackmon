@@ -6,6 +6,9 @@
 
 #include "core/report.hpp"
 
+namespace parsers {
+namespace AIS {
+
 /// \brief parse each AIS message from the linked connector
 
 class AISParser {
@@ -42,3 +45,5 @@ private:
 
 };
 
+}  // namespace AIS
+}  // namespace parsers

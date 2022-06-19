@@ -8,17 +8,21 @@ SET(BASE_NAME trackmon)
 
 INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/src )
 
-# ====== Connectors Library ======
-SET(CONNECTOR_LIB_NAME "${BASE_NAME}-connectors")
-SET(CONNECTOR_SOURCES
-    ${CMAKE_SOURCE_DIR}/src/connectors/file/pcap-file-connector.cpp
-    ${CMAKE_SOURCE_DIR}/src/connectors/file/text-file-connector.cpp
+# ====== Reader Libraries ======
+
+## ====== NMEA-0183 Reader Library ======
+SET(NMEA_0183_READER_LIB_NAME "${BASE_NAME}-nmea-0183-connectors")
+SET(NMEA_0183_READER_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/readers/nmea-0183/pcap-log-reader.cpp
+    ${CMAKE_SOURCE_DIR}/src/readers/nmea-0183/pcap-log-reader.hpp
+    ${CMAKE_SOURCE_DIR}/src/readers/nmea-0183/text-log-reader.cpp
+    ${CMAKE_SOURCE_DIR}/src/readers/nmea-0183/text-log-reader.hpp
 )
-ADD_LIBRARY(${CONNECTOR_LIB_NAME} STATIC ${CONNECTOR_SOURCES})
-TARGET_LINK_LIBRARIES(${CONNECTOR_LIB_NAME} PRIVATE 
+ADD_LIBRARY(${NMEA_0183_READER_LIB_NAME} STATIC ${NMEA_0183_READER_SOURCES})
+TARGET_LINK_LIBRARIES(${NMEA_0183_READER_LIB_NAME} PRIVATE
                             ${SYSTEM_LIBS}
                             ${PCAP_LIBRARIES} )
-
+LIST( APPEND READER_LIBS ${NMEA_0183_READER_LIB_NAME} )
 
 # ====== Core Library ======
 SET(CORE_LIB_NAME "${BASE_NAME}-core")
@@ -32,17 +36,20 @@ TARGET_LINK_LIBRARIES(${CORE_LIB_NAME} PRIVATE
                             ${SYSTEM_LIBS}
                             ${PROJ_LIBRARIES}
 )
+SET( CORE_LIBS ${CORE_LIB_NAME} )
 
-# ====== Parsers Library ======
-SET(PARSE_LIB_NAME "${BASE_NAME}-parsers")
-SET(PARSE_SOURCES
+# ====== Parser Libraries ======
+
+## ====== AIS Parser Library ======
+SET(AIS_PARSE_LIB_NAME "${BASE_NAME}-ais-parser")
+SET(AIS_PARSE_SOURCES
     ${CMAKE_SOURCE_DIR}/src/parsers/ais/ais-parser.cpp
 )
-ADD_LIBRARY(${PARSE_LIB_NAME} STATIC ${PARSE_SOURCES})
-TARGET_LINK_LIBRARIES(${PARSE_LIB_NAME} PRIVATE
+ADD_LIBRARY(${AIS_PARSE_LIB_NAME} STATIC ${AIS_PARSE_SOURCES})
+TARGET_LINK_LIBRARIES(${AIS_PARSE_LIB_NAME} PRIVATE
                             ${AIS_LIBRARY}
-                            ${SYSTEM_LIBS}
-)
+                            ${SYSTEM_LIBS} )
+LIST( APPEND PARSER_LIBS ${AIS_PARSE_LIB_NAME} )
 
 # ====== UI Library ======
 SET(UI_LIB_NAME "${BASE_NAME}-ui")
@@ -56,7 +63,9 @@ TARGET_LINK_LIBRARIES(${UI_LIB_NAME} PRIVATE
                             ${SYSTEM_LIBS}
                             ${CORE_LIB_NAME}
                             ${CURSES_LIBRARIES}
-)
+                            )
+SET( UI_LIBS ${UI_LIB_NAME} )
+
 
 # ====== Full Executable -- With UI ======
 SET(UI_EXE_NAME trackmon)
@@ -70,10 +79,9 @@ TARGET_LINK_LIBRARIES(${UI_EXE_NAME} PRIVATE
     ${CURSES_LIBRARIES}
     # ${MOOS_LIBRARIES}
     # ${MOOS_IVP_LIBRARIES}
-    ${PROJ_LIBRARIES}
-    ${CONNECTOR_LIB_NAME}
-    ${CORE_LIB_NAME}
-    ${PARSE_LIB_NAME}
+    ${READER_LIBS}
+    ${CORE_LIBS}
+    ${PARSER_LIBS}
     ${UI_LIB_NAME}
     ${SYSTEM_LIBS}
     )
@@ -91,10 +99,10 @@ TARGET_LINK_LIBRARIES(${INGEST_EXE_NAME} PRIVATE
     # ${MOOS_LIBRARIES}
     # ${MOOS_IVP_LIBRARIES}
     # ${PROJ_LIBRARIES}
-    ${CONNECTOR_LIB_NAME}
-    ${CORE_LIB_NAME}
-    ${PARSE_LIB_NAME}
-    ${UI_LIB_NAME}
+    ${READER_LIBS}
+    ${CORE_LIBS}
+    ${PARSER_LIBS}
+    ${UI_LIBS}
     ${SYSTEM_LIBS}
     )
 

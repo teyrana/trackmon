@@ -71,35 +71,35 @@ void TrackCache::set_origin(double latitude, double longitude) {
     // Transform Latitude/Longitude to UTM Easting/Northing
     offset = proj_trans( projection, PJ_FWD, anchor );
 
-    {
-        // DEBUG
-        const double latitude = anchor.lp.lam;
-        const double longitude = anchor.lp.phi;
-        fprintf(stdout, "    ::Lat/Lon Anchor:(deg): %9.6f, %9.6f\n", latitude, longitude );
-        fprintf(stdout, "    ::UTM Offset:(m):       %9.2f, %9.2f\n", offset.enu.e, offset.enu.n );
-        // DEBUG
+    // {
+    //     // DEBUG
+    //     const double latitude = anchor.lp.lam;
+    //     const double longitude = anchor.lp.phi;
+    //     fprintf(stdout, "    ::Lat/Lon Anchor:(deg): %9.6f, %9.6f\n", latitude, longitude );
+    //     fprintf(stdout, "    ::UTM Offset:(m):       %9.2f, %9.2f\n", offset.enu.e, offset.enu.n );
+    //     // DEBUG
 
-        { // CHECK
-            const double latitude = anchor.lp.lam;
-            const double longitude = anchor.lp.phi;
-            double check_1_easting = NAN;
-            double check_1_northing = NAN;
-            /* _ = */ project_to_UTM( latitude, longitude, check_1_easting, check_1_northing );
-            fprintf(stdout, "    :?:UTM:(m):             %9.2f, %9.2f\n", check_1_easting, check_1_northing );
-        }{ // CHECK
-            const double latitude = anchor.lp.lam;
-            const double longitude = anchor.lp.phi;
-            double check_2_easting = NAN;
-            double check_2_northing = NAN;
-            /* _ = */ project_to_local( latitude, longitude, check_2_easting, check_2_northing );
-            fprintf(stdout, "    :?:Local:(m):           %9.2f, %9.2f\n", check_2_easting, check_2_northing );
-        }{ // CHECK
-            double check_3_latitude = NAN;
-            double check_3_longitude = NAN;
-            /* _ = */ project_to_global( offset.enu.e, offset.enu.n, check_3_latitude, check_3_longitude );
-            fprintf(stdout, "    :?: Lat / Lon:          %9.6f, %9.6f\n", check_3_latitude, check_3_longitude );
-        } // CHECK
-    }
+    //     { // CHECK
+    //         const double latitude = anchor.lp.lam;
+    //         const double longitude = anchor.lp.phi;
+    //         double check_1_easting = NAN;
+    //         double check_1_northing = NAN;
+    //         project_to_UTM( latitude, longitude, check_1_easting, check_1_northing );
+    //         fprintf(stdout, "    :?:UTM:(m):             %9.2f, %9.2f\n", check_1_easting, check_1_northing );
+    //     }{ // CHECK
+    //         const double latitude = anchor.lp.lam;
+    //         const double longitude = anchor.lp.phi;
+    //         double check_2_easting = NAN;
+    //         double check_2_northing = NAN;
+    //         project_to_local( latitude, longitude, check_2_easting, check_2_northing );
+    //         fprintf(stdout, "    :?:Local:(m):           %9.2f, %9.2f\n", check_2_easting, check_2_northing );
+    //     }{ // CHECK
+    //         double check_3_latitude = NAN;
+    //         double check_3_longitude = NAN;
+    //         project_to_global( offset.enu.e, offset.enu.n, check_3_latitude, check_3_longitude );
+    //         fprintf(stdout, "    :?: Lat / Lon:          %9.6f, %9.6f\n", check_3_latitude, check_3_longitude );
+    //     } // CHECK
+    // }
 }
 
 size_t TrackCache::size() const {

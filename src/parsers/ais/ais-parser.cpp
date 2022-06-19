@@ -13,10 +13,12 @@
 // vvvv monkey-patch
 // function is technically exported from the upstream library, but isn't included in the ais.h header.
 namespace libais {
-std::unique_ptr<libais::AisMsg> CreateAisMsg(const string &body, const int fill_bits);
+std::unique_ptr<AisMsg> CreateAisMsg(const string &body, const int fill_bits);
 }  // namespace libais
 // ^^^^ monkey-patch
 
+namespace parsers {
+namespace AIS {
 
 // ===============================================================================
 
@@ -122,7 +124,7 @@ Report* AISParser::parse_nmea_sentence( const std::string& sentence ){
     }
     const uint8_t pad_bit_count = sentence.at(checksum_index-2) - '0';
 
-    const auto msg = libais::CreateAisMsg( body, pad_bit_count);
+    const auto msg = ::libais::CreateAisMsg( body, pad_bit_count);
     if( msg->had_error() ){
         std::cerr << "?ERROR: " << msg->get_error() << "): " << libais::AIS_STATUS_STRINGS[msg->get_error()] << std::endl;
         return nullptr;
@@ -190,3 +192,6 @@ Report* AISParser::parse_nmea_sentence( const std::string& sentence ){
     return &export_;
 }
 
+
+}  // namespace AIS
+}  // namespace parsers

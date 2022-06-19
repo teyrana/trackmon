@@ -1,17 +1,20 @@
 #include <filesystem>
 #include <iostream>
 
-#include "text-file-connector.hpp"
+#include "text-log-reader.hpp"
 
-TextFileConnector::TextFileConnector( const std::string& filename ){
+namespace readers {
+namespace NMEA0183 {
+
+TextLogReader::TextLogReader( const std::string& filename ){
     open(filename);
 }
 
-bool TextFileConnector::good() const {
+bool TextLogReader::good() const {
     return _source.good();
 }
 
-bool TextFileConnector::open( const std::string& filename ){
+bool TextLogReader::open( const std::string& filename ){
     if( ! std::filesystem::exists(std::filesystem::path(filename))){
         std::cerr << "?!? file is missing: " << filename << '\n';
         std::cerr << "::cwd: " << std::filesystem::current_path().string() << '\n';
@@ -23,7 +26,7 @@ bool TextFileConnector::open( const std::string& filename ){
     return _source.good();
 }
 
-const std::string* TextFileConnector::next() {
+const std::string* TextLogReader::next() {
     _source >> _each_line;
 
     if( _source.good() ){   
@@ -32,3 +35,6 @@ const std::string* TextFileConnector::next() {
 
     return nullptr;
 }
+
+}  // namespace readers
+}  // namespace NMEA0183

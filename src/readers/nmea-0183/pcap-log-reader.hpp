@@ -7,11 +7,14 @@
 
 #include <pcap/pcap.h>
 
+namespace readers {
+namespace NMEA0183 {
+
 /// \brief binary connector that reads .pcap (packet capture) files
 ///
 /// References:
 ///   - https://www.tcpdump.org/manpages/pcap.3pcap.html
-class PCAPFileConnector {
+class PCAPLogReader {
 public:
     struct FrameBuffer {
         uint64_t timestamp;
@@ -19,7 +22,7 @@ public:
         size_t length;
     };
 
-    PCAPFileConnector( const std::string& filename );
+    PCAPLogReader( const std::string& filename );
     
     bool good() const;
 
@@ -42,3 +45,5 @@ private:
 
 };
 
+}
+}

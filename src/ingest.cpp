@@ -2,14 +2,14 @@
 #include <string>
 #include <vector>
 
-#ifdef ENABLE_MOOS
+#ifdef ENABLE_MOOS_IVP
 #include "MBUtils.h"
 #endif
 
-
+// 1st Party includes
 #include "core/track-cache.hpp"
-#include "connectors/file/pcap-file-connector.hpp"
-#include "connectors/file/text-file-connector.hpp"
+#include "readers/nmea-0183/pcap-log-reader.hpp"
+#include "readers/nmea-0183/text-log-reader.hpp"
 #include "parsers/ais/ais-parser.hpp"
 
 const static std::string binary_name = "trackmon";
@@ -80,10 +80,9 @@ int main(int argc, char *argv[]){
     const std::string ais_file = "data/ais.tcpdump.2022-05-18.pcap";
 
     std::cout << "    >> Creating File Connector to:" << ais_file << std::endl;
-    //TextFileConnector conn( ais_file );
-    PCAPFileConnector conn( ais_file );
+    readers::NMEA0183::PCAPLogReader reader( ais_file );
 
-    if( ! (conn.good()) ){
+    if( ! (reader.good()) ){
         std::cerr << "!!! Could not create all connectors\n";
         return EXIT_FAILURE;
     }
@@ -92,7 +91,7 @@ int main(int argc, char *argv[]){
     std::cout << ">>> .C. Creating Parsers:" << std::endl;
     std::cout << "    >> Creating AIS Parser..." << std::endl;
 
-    AISParser parser;
+    parsers::AIS::AISParser parser;
 
     // ===========================================================================================
     std::cout << ">>> .D. Ingest Updates:\n"
@@ -104,7 +103,7 @@ int main(int argc, char *argv[]){
     while( (0 == iteration_limit) || (iteration_limit < iteration_number) ){
 
         // .1. get next data chunk
-        const auto chunk = conn.next();
+        const auto chunk = reader.next();
         if( 0 == chunk.length ){
             std::cout << "    (EOF)" << std::endl;
             break;

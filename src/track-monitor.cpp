@@ -7,8 +7,8 @@
 #include <ncurses.h>
 
 #include "core/track-cache.hpp"
-#include "connectors/file/pcap-file-connector.hpp"
-#include "connectors/file/text-file-connector.hpp"
+#include "readers/nmea-0183/pcap-log-reader.hpp"
+#include "readers/nmea-0183/text-log-reader.hpp"
 #include "parsers/ais/ais-parser.hpp"
 
 #include "ui/curses-input-handler.hpp"
@@ -91,10 +91,10 @@ int main(int argc, char *argv[]){
     const std::string ais_file = "data/ais.tcpdump.2022-05-18.pcap";
 
     std::cout << "    :> Creating File Connector to:" << ais_file << std::endl;
-    //TextFileConnector conn( ais_file );
-    PCAPFileConnector conn( ais_file );
+    //TextLogReader reader( ais_file );
+    readers::NMEA0183::PCAPLogReader reader( ais_file );
 
-    if( ! (conn.good()) ){
+    if( ! (reader.good()) ){
         std::cerr << "!!! Could not create all connectors\n";
         return EXIT_FAILURE;
     }
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]){
     // ===========================================================================================
     std::cout << ">>> .C. Creating Parsers:" << std::endl;
     std::cout << "    :> Creating AIS Parser..." << std::endl;
-    AISParser parser;
+    parsers::AIS::AISParser parser;
 
     // ===========================================================================================
     std::cout << ">>> .D. Building UI: " << std::endl;
@@ -121,7 +121,7 @@ int main(int argc, char *argv[]){
     auto last_change_timestamp = last_render_timestamp;
     while(run){
         // .1. get next data chunk
-        const auto chunk = conn.next();
+        const auto chunk = reader.next();
         if( 0 < chunk.length ){
             // .2. Load next chunk into parser
             parser.load( chunk.timestamp, chunk.buffer, chunk.length );
