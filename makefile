@@ -19,7 +19,7 @@ build: build/CMakeCache.txt
 	cd build && ninja
 
 ingest: build/src/ingest
-	build/src/ingest
+	build/src/ingest -v
 
 mon: build/src/trackmon
 	build/src/trackmon

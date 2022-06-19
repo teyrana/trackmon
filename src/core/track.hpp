@@ -21,8 +21,8 @@ public:
 
     void update( const Report& _report );
     
-    //const std::string name;
     const uint64_t id;
+    std::string name;
     
     Report last_report;
     

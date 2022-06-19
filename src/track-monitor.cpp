@@ -1,20 +1,24 @@
+// Standard Library Includes
 #include <chrono>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
 
+// Dependency Includes
 #include <cxxopts.hpp>
 #include <fmt/core.h>
 #include <ncurses.h>
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
+// Project includes
 #include "core/track-cache.hpp"
 #include "readers/pcap/log-reader.hpp"
-//#include "parserss/nmea-0183/text-log-reader.hpp"
-#include "parsers/nmea0183/packet-parser.hpp"
 #include "parsers/ais/parser.hpp"
+#include "parsers/moos/message-parser.hpp"
+#include "parsers/moos/packet-parser.hpp"
+#include "parsers/nmea0183/packet-parser.hpp"
 
 #include "ui/curses-input-handler.hpp"
 #include "ui/curses-renderer.hpp"
@@ -55,20 +59,50 @@ static bool run = true;
 //     return(true);
 // }
 
+void print_build_information() {
+    std::cout << "==== Build Information: ==== \n";
+
+    // Debug vs Release
+#ifdef DEBUG
+    std::cout << "    ::Build Type: Debug\n";
+#endif
+#ifdef NDEBUG
+    std::cout << "    ::Build Type: Release\n";
+#endif
+
+    // Optional Modules:
+#ifdef ENABLE_AIS
+    std::cout << "    ::Enable: ENABLE_AIS\n";
+#endif
+#ifdef ENABLE_MOOS
+    std::cout << "    ::Enable: ENABLE_MOOS\n";
+#endif
+
+    std::cout << std::endl;
+}
+
+void print_version_information() {
+    std::cout << binary_name << "    Version: " << "0.0.1-beta" << std::endl;
+}
 
 int main(int argc, char *argv[]){
     // Create a cxxopts::Options instance.
-    cxxopts::Options options("trackgest", "ingest some tracks, and debug the result");
+    cxxopts::Options options("trackmon", "monitor tracks from data streams");
     options.add_options()
-        ("l,limit", "limit processing to this many packets.  0 (default) processes all traffic.", cxxopts::value<int>()->default_value("0"))
+        ("b,build", "Display Build Information")
         ("h,help", "Print usage")
         ("v,verbose", "Verbose output")
-        ("V,Version", "Print Version")
-    ;
+        ("V,version", "Print Version");
     const auto clargs = options.parse(argc, argv);
 
-    if( clargs["Version"].as<bool>() ){
-        std::cout << binary_name << "    Version: " << "0.0.1-beta" << std::endl;
+    if( clargs["help"].as<bool>() ){
+        std::cout << options.help() << std::endl;
+        exit(0);
+    }else if( clargs["version"].as<bool>() ){
+        print_version_information();
+        exit(0);
+    }else if( clargs["build"].as<bool>() ){
+        print_build_information();
         exit(0);
     }
 
@@ -80,7 +114,6 @@ int main(int argc, char *argv[]){
     }else{
         spdlog::set_level(spdlog::level::info);
     }
-    spdlog::debug("::verbosity = {} => {}", clargs["verbose"].count(), spdlog::get_level() );
 
     // change log pattern
     // spdlog::set_pattern("[%H:%M:%S %z] [%n][%v]");
@@ -97,26 +130,48 @@ int main(int argc, char *argv[]){
     // ===========================================================================================
     spdlog::info(">>> .B. Creating Connectors:");
     
-    // const std::string ais_file = "data/ais.nmea0183.2022-05-18.log";
-    // const std::string ais_file = "data/ais.nmea0183.2022-05-19.log";
-    // spdlog::info("    :> Creating File Connector to:" << ais_file);
-    // TextLogReader reader( ais_file );
+#ifdef ENABLE_AIS
+    // // const std::string ais_file = "data/ais.nmea0183.2022-05-18.log";
+    // // const std::string ais_file = "data/ais.nmea0183.2022-05-19.log";
+    // const std::string input_pcap_file = "data/ais.tcpdump.2022-05-18.pcap";
+#endif
 
-    const std::string ais_file = "data/ais.tcpdump.2022-05-18.pcap";
-    spdlog::info("    :> Creating File Connector to: {}", ais_file);
-    readers::pcap::LogReader reader( ais_file );
-    reader.set_filter_udp();
-    reader.set_filter_port(4003);
+#ifdef ENABLE_MOOS
+    // const std::string input_pcap_file = "data/m2_berta.moos.pcap";
+    // const std::string input_pcap_file = "data/m2_berta.moos.gt140.pcap";
+    const std::string input_pcap_file = "data/m2_berta.moos.p9000.pcap";
+#endif
+
+    spdlog::info("    :> Creating File Connector to: {}", input_pcap_file);
+    readers::pcap::LogReader reader( input_pcap_file );
     if( ! (reader.good()) ){
         spdlog::error("!!! Could not create all connectors");
         return EXIT_FAILURE;
     }
 
+#ifdef ENABLE_AIS
+    reader.set_filter_udp();
+    reader.set_filter_port(4003);
+#endif 
+#ifdef ENABLE_MOOS
+    reader.set_filter_tcp();
+    reader.set_filter_port(9000);
+#endif
+
     // ===========================================================================================
     spdlog::info(">>> .C. Creating Parsers:");
+#ifdef ENABLE_AIS
     spdlog::info("    :> Creating AIS Parser...");
     parsers::nmea0183::PacketParser nmea_parser;
     parsers::ais::Parser ais_parser;
+#endif
+
+#ifdef ENABLE_MOOS
+    spdlog::info( "    >> Creating MOOS Parser..." );
+    parsers::moos::PacketParser moos_packet_parser;
+    spdlog::info( "    >> Creating Node-Report Parser..." );
+    parsers::moos::MessageParser moos_report_parser;
+#endif
 
     // ===========================================================================================
     spdlog::info(">>> .D. Building UI: ");
@@ -125,8 +180,8 @@ int main(int argc, char *argv[]){
 
     // ===========================================================================================
 
-    // uint32_t interval_update_count;
-    // uint32_t interval_start;
+    uint32_t interval_update_count;
+    uint32_t interval_start;
 
     using clock = std::chrono::system_clock;
     const std::chrono::milliseconds render_blackout(20);  // wait at least this much time between render calls
@@ -137,17 +192,25 @@ int main(int argc, char *argv[]){
         // .1. get next data chunk
         const auto chunk = reader.next();
         if( 0 < chunk.length ){
-            // // .2. Load next chunk into parser
-            // parser.load( chunk.timestamp, chunk.buffer, chunk.length );
-            // // .3. Drain reports from each parser
-            //Report* report = parser.parse();
-            // while( report ){
-            //     // Update cache
-            //     last_change_timestamp = clock::now();
-            //     cache.update( *report );
-            //     // Pull next report
-            //     report = parser.parse();
-            // }
+
+            // .2. Load next chunk into parser
+            moos_packet_parser.load( &chunk );
+
+            // .3. Pull reports from packet until empty
+            while( ! moos_packet_parser.empty() ){
+                const std::string line = moos_packet_parser.next();
+                if( line.empty() ){
+                    continue;
+                }
+
+                // .3. Pull reports out of parser until drained
+                Report* report = moos_report_parser.parse( line );
+                if( report ){
+                    cache.update( *report );
+                    last_change_timestamp = clock::now();
+                    ++interval_update_count;
+                }
+            }
         }
 
         bool pending_changes = false;
@@ -158,9 +221,6 @@ int main(int argc, char *argv[]){
                 pending_changes = true;
             }
         }
-        // last_change_timestamp = std::chrono::system_clock::now();
-        //     auto current_timestamp = std::chrono::system_clock::now();
-
 
         last_render_timestamp = handler.update( pending_changes );
         sleep(0.01);

@@ -13,6 +13,8 @@ public:
 
     Report& operator=( const Report& other );
 
+    void reset();
+
 // metadata
 public:
     std::string name;

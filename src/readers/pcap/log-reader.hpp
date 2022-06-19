@@ -40,7 +40,7 @@ public:
     bool set_filter_port( uint16_t next_port);
 
 private:
-    int datalink_layer_type_;
+    int layer_2_protocol_;
     bool eof;
 
     // filter criteria

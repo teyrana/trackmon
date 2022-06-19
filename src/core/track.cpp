@@ -18,12 +18,16 @@ Track::Track(const Track& other)
 
 void Track::update( const Report& _report ){
     last_report = _report;
+
+    if( ! _report.name.empty() ){
+        name = _report.name;
+    }
 }
 
 std::string Track::str() const { 
    std::ostringstream buf;
-    buf << "[" << id << "]  =>";
-    buf << " @ {" << last_report.latitude << " N Lat, " << last_report.longitude << " E Lon }";
-    buf << " // {" << last_report.easting << " Eas, " << last_report.northing << " Nor }";
+    buf << "[" << id << "][" << name << "]  =>  ";
+    buf << "@ {" << last_report.latitude << " N Lat, " << last_report.longitude << " E Lon }";
+    buf << "// {" << last_report.easting << " Eas, " << last_report.northing << " Nor }";
     return buf.str();
 }

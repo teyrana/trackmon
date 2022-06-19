@@ -60,3 +60,22 @@ Report& Report::operator=( const Report& other ){
 
     return *this;
 }
+
+void Report::reset(){
+
+    id = 0;
+    name = "";
+
+    timestamp = 0;
+    source = UNKNOWN;
+    status = 15;
+
+    latitude = NAN;
+    longitude = NAN;
+    easting = NAN;
+    northing = NAN;
+    
+    heading = NAN;
+    course = NAN;
+    speed = NAN;
+}

@@ -9,7 +9,10 @@ namespace parsers {
 namespace nmea0183 {
 
 bool PacketParser::empty() const {
-    return ( (nullptr == cache) || (nullptr == cursor ));
+    return (   (nullptr==cache)
+            || (nullptr==cursor)
+            || (cache->length <= static_cast<size_t>(cursor - cache->buffer)) 
+    );
 }
 
 const uint8_t* PacketParser::find_byte( const uint8_t* find_start, uint8_t value ){
@@ -70,7 +73,7 @@ std::string PacketParser::next() {
 }
 
 uint64_t PacketParser::timestamp() const {
-    return cache->timestamp;
+    return (nullptr==cache) ? 0 : cache->timestamp;
 }
 
 }  // namespace NMEA0183

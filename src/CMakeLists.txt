@@ -51,6 +51,20 @@ TARGET_LINK_LIBRARIES(${AIS_PARSE_LIB_NAME} PRIVATE
                             ${SYSTEM_LIBS} )
 LIST( APPEND PARSER_LIBS ${AIS_PARSE_LIB_NAME} )
 
+## ====== MOOS Reader Library ======
+SET(MOOS_PARSER_LIB_NAME "${BASE_NAME}-moos-parser")
+SET(MOOS_PARSER_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/parsers/moos/message-parser.cpp
+    ${CMAKE_SOURCE_DIR}/src/parsers/moos/message-parser.hpp
+    ${CMAKE_SOURCE_DIR}/src/parsers/moos/packet-parser.cpp
+    ${CMAKE_SOURCE_DIR}/src/parsers/moos/packet-parser.hpp
+)
+ADD_LIBRARY(${MOOS_PARSER_LIB_NAME} STATIC ${MOOS_PARSER_SOURCES})
+TARGET_LINK_LIBRARIES(${MOOS_PARSER_LIB_NAME} PRIVATE
+                            ${SYSTEM_LIBS}
+                            ${PCAP_LIBRARIES} )
+LIST( APPEND PARSER_LIBS ${MOOS_PARSER_LIB_NAME} )
+
 ## ====== NMEA-0183 Parser Library ======
 SET(NMEA_0183_PARSER_LIB_NAME "${BASE_NAME}-nmea-0183-parser")
 SET(NMEA_0183_PARSER_SOURCES

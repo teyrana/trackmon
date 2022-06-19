@@ -14,7 +14,7 @@ TrackCache::TrackCache()
     , offset({NAN,NAN,NAN,NAN})
     , context(nullptr)
     , projection(nullptr)
-    , should_project(true)
+    , should_project(false)
 {
     context = proj_context_create();
 }
@@ -70,6 +70,10 @@ void TrackCache::set_origin(double latitude, double longitude) {
 
     // Transform Latitude/Longitude to UTM Easting/Northing
     offset = proj_trans( projection, PJ_FWD, anchor );
+
+    // successfully generated projection information:
+    should_project = true;
+    return;
 
     // {
     //     // DEBUG
@@ -166,7 +170,7 @@ std::string TrackCache::to_string() const {
     // print with X -> left; Y -> Up
     buf << "======== ======= ======= Cache has " << index.size() << " entries ======= ======= =======\n";
     for( const auto& [_id, each_track] : index ){
-        buf << "         [" << each_track.id << "] => " << each_track.str() << '\n';
+        buf << "         " << each_track.str() << '\n';
     }
     buf << std::endl;
 
