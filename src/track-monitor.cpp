@@ -95,6 +95,8 @@ int main(int argc, char *argv[]){
     const std::string ais_file = "data/ais.tcpdump.2022-05-18.pcap";
     std::cout << "    :> Creating File Connector to:" << ais_file << std::endl;
     readers::pcap::LogReader reader( ais_file );
+    reader.set_filter_udp();
+    reader.set_filter_port(4003);
     if( ! (reader.good()) ){
         std::cerr << "!!! Could not create all connectors\n";
         return EXIT_FAILURE;

@@ -33,9 +33,20 @@ public:
 
     uint64_t timestamp() const;
 
+    bool set_filter_udp();
+
+    bool set_filter_tcp();
+
+    bool set_filter_port( uint16_t next_port);
+
 private:
     int datalink_layer_type_;
     bool eof;
+
+    // filter criteria
+    uint8_t filter_layer_4_proto;
+    uint16_t filter_layer_4_port;
+
     pcap_t* pcap_handle_;
 
     FrameBuffer cache;

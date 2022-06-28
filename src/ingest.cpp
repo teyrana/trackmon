@@ -63,6 +63,8 @@ int main(int argc, char *argv[]){
 
     std::cout << "    >> Creating File Connector to:" << input_pcap_file << std::endl;
     readers::pcap::LogReader reader( input_pcap_file );
+    reader.set_filter_udp();
+    reader.set_filter_port(4003);
 
     if( ! (reader.good()) ){
         std::cerr << "!!! Could not create all connectors\n";

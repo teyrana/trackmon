@@ -28,6 +28,8 @@ static_assert( udp_header_length == 8, "UDP Header size does not match??");
 LogReader::LogReader( const std::string& filename )
     : datalink_layer_type_(DLT_NULL)
     , eof(true)
+    , filter_layer_4_proto(0)
+    , filter_layer_4_port(0)
     , pcap_handle_(nullptr)
 {
     pcap_init(PCAP_CHAR_ENC_UTF_8, error_message_buffer);
@@ -89,30 +91,57 @@ const FrameBuffer& LogReader::next() {
     assert( (0x45 == read_buffer[ipv4_header_offset]) && ("IPv4 Header was not in the expected location!?") );
       
     const uint8_t layer_4_proto = reinterpret_cast<const iphdr*>(read_buffer+ipv4_header_offset)->protocol;
+    if( layer_4_proto == filter_layer_4_proto ){
+        if( IPPROTO_TCP == layer_4_proto ){
+            std::cerr << "    >>> Processing IPPROTO_TCP: " << IPPROTO_TCP << std::endl;
+            // if( 0x45 == read_buffer[ipv4_header_offset] ){
+            // NYI
+            std::cerr << "    <<< ERROR!\n";
+            // EOF
+            cache.length = 0;
+            return cache;
+        }else if( IPPROTO_UDP == layer_4_proto ){
+            const struct timeval& ts = frame_header->ts;
+            cache.timestamp = (ts.tv_sec*1'000'000 + ts.tv_usec);
+        
+            const auto udp_header_offset = ipv4_header_offset + ipv4_header_length;
+            // const udphdr * udp_header =  reinterpret_cast<const udphdr*>(read_buffer+udp_header_offset);
+            const uint16_t udp_dest_port = ntohs(reinterpret_cast<const udphdr*>(read_buffer+udp_header_offset)->dest);
 
-    if( IPPROTO_TCP == layer_4_proto ){
-        std::cerr << "    >>> Processing IPPROTO_TCP: " << IPPROTO_TCP << std::endl;
-        // if( 0x45 == read_buffer[ipv4_header_offset] ){
-        // NYI
-        std::cerr << "    <<< ERROR!\n";
-        // EOF
-        cache.length = 0;
-        return cache;
-    }else if( IPPROTO_UDP == layer_4_proto ){
-        const struct timeval& ts = frame_header->ts;
-        cache.timestamp = (ts.tv_sec*1'000'000 + ts.tv_usec);
-    
-        const size_t data_offset = ipv4_header_offset + ipv4_header_length + udp_header_length;
-        cache.length = frame_header->len - data_offset;
-        cache.buffer = const_cast<uint8_t*>(read_buffer + data_offset);
-
-        return cache;
+            if( filter_layer_4_port == udp_dest_port ){
+                const size_t data_offset = ipv4_header_offset + ipv4_header_length + udp_header_length;
+                cache.length = frame_header->len - data_offset;
+                cache.buffer = const_cast<uint8_t*>(read_buffer + data_offset);
+                return cache;
+            }else{
+                std::cerr << "    !?!? Port mismatch on UDP packet! "
+                          << "    filter_port == " << filter_layer_4_port 
+                          << "    udp_dest_port == " << udp_dest_port << std::endl;
+            }
+        }
+    }else{
+        std::cerr << "    !?!? Layer-4-Protocol mismatch!! "
+                  << "    expected protocol: " << filter_layer_4_proto 
+                  << "    found protocol: " << layer_4_proto << std::endl;
     }
-    
-    std::cerr << "    <<< ERROR!\n";
-    // EOF
+
     cache.length = 0;
     return cache;
+}
+
+bool LogReader::set_filter_tcp(){
+    filter_layer_4_proto = IPPROTO_TCP;
+    return true;
+}
+
+bool LogReader::set_filter_udp(){
+    filter_layer_4_proto = IPPROTO_UDP;
+    return true;
+}
+
+bool LogReader::set_filter_port( uint16_t next_filter_port ){
+    filter_layer_4_port = next_filter_port;
+    return true;
 }
 
 uint64_t LogReader::timestamp() const {
