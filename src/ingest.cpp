@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 
+#include <cxxopts.hpp>
+
 // 1st Party includes
 #include "core/track-cache.hpp"
 #include "readers/pcap/log-reader.hpp"
@@ -30,19 +32,28 @@ void print_help(){
 }
 
 int main(int argc, char *argv[]){
-    for(int i=1; i<argc; i++) {
-        std::string argi = argv[i];
 
-        if((argi == "-h") || (argi == "--help") || (argi=="-help")){
-            print_help();
-            return 0;
-        }else if((argi == "-v") || (argi == "--version")){
-            std::cout << binary_name << "    Version: " << binary_version << std::endl;
-            return 0;
-        }
-        // add more arguments here.
+    // Create a cxxopts::Options instance.
+    cxxopts::Options options("trackgest", "ingest some tracks, and debug the result");
+    options.add_options()
+        // ("f,foo", "Param foo", cxxopts::value<int>()->default_value("10"))
+        ("l,limit", "limit processing to this many packets.  0 (default) processes all traffic.", cxxopts::value<int>()->default_value("0"))
+        ("h,help", "Print usage")
+        ("v,verbose", "Verbose output")
+        ("V,Version", "Print Version")
+    ;
+    const auto clargs = options.parse(argc, argv);
+
+    if( clargs["Version"].as<bool>() ){
+        std::cout << binary_name << "    Version: " << "0.0.1-beta" << std::endl;
+        exit(0);
+    }else if (clargs["help"].as<bool>() ){
+        std::cout << options.help() << std::endl;
+        exit(0);
     }
 
+    std::cerr << "::verbosity = " << clargs["verbose"].count() << std::endl;
+    // std::cerr << "::verbosity = " << clargs["verbose"].as<int>() << std::endl;
 
     // ===========================================================================================
     std::cout << ">>> .A. Creating Track Database:" << std::endl;
@@ -82,7 +93,7 @@ int main(int argc, char *argv[]){
               << "    ...." << std::endl;
 
     uint32_t iteration_number = 0;
-    const uint32_t iteration_limit = 0;  // 0 => disable limit
+    const uint32_t iteration_limit = clargs["limit"].as<int>();
     uint32_t update_count = 0;
     while( (0 == iteration_limit) || ( iteration_number < iteration_limit ) ){
         // fprintf( stderr, "    @ %03u\n", iteration_number );

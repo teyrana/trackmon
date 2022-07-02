@@ -41,6 +41,8 @@ find_package(AIS REQUIRED)
 
 find_package(Curses REQUIRED)
 
+find_package(cxxopts REQUIRED)
+
 find_package(PROJ CONFIG REQUIRED)
 
 find_package(PCAP REQUIRED)

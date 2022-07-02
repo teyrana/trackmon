@@ -18,8 +18,9 @@ fi
 RUN dnf makecache \
     && dnf install -y \
         cmake \
-        curl \
         cppcheck \
+        curl \
+        cxxopts-devel \
         gcc-c++ \
         gdb \
         git \
