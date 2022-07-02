@@ -4,7 +4,11 @@
 #include <string>
 #include <vector>
 
+#include <cxxopts.hpp>
+#include <fmt/core.h>
 #include <ncurses.h>
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
 #include "core/track-cache.hpp"
 #include "readers/pcap/log-reader.hpp"
@@ -51,65 +55,71 @@ static bool run = true;
 //     return(true);
 // }
 
-void print_help(){
-    std::cout << "\n"
-        << "====== ====== " << binary_name << " ====== ======\n"
-        << "Synopsis\n"
-        << "-------------------------------------\n"
-        << "  This app monitors track traffic, and provides a dynamic, configurable way to inspect same.\n"
-        << "  In-app commands are displayed in the screen footer.\n"
-        << "\n"
-        << "Options:\n"
-        << "  <None>\n"
-        << "  --version,-v\n"
-        << "    Display the release version of this binary.\n"
-        << "\n";
-}
 
 int main(int argc, char *argv[]){
-    for(int i=1; i<argc; i++) {
-        std::string argi = argv[i];
+    // Create a cxxopts::Options instance.
+    cxxopts::Options options("trackgest", "ingest some tracks, and debug the result");
+    options.add_options()
+        ("l,limit", "limit processing to this many packets.  0 (default) processes all traffic.", cxxopts::value<int>()->default_value("0"))
+        ("h,help", "Print usage")
+        ("v,verbose", "Verbose output")
+        ("V,Version", "Print Version")
+    ;
+    const auto clargs = options.parse(argc, argv);
 
-        if((argi == "-h") || (argi == "--help") || (argi=="-help")){
-            print_help();
-            return 0;
-        }else if((argi == "-v") || (argi == "--version")){
-            std::cout << binary_name << "    Version: " << binary_version << std::endl;
-            return 0;
-        }
-        // add more arguments here.
+    if( clargs["Version"].as<bool>() ){
+        std::cout << binary_name << "    Version: " << "0.0.1-beta" << std::endl;
+        exit(0);
     }
 
+    // Set global log level to debug
+    if( 1 < clargs["verbose"].count()){
+        spdlog::set_level(spdlog::level::trace);
+    }else if( 0 < clargs["verbose"].count()){
+        spdlog::set_level(spdlog::level::debug);
+    }else{
+        spdlog::set_level(spdlog::level::info);
+    }
+    spdlog::debug("::verbosity = {} => {}", clargs["verbose"].count(), spdlog::get_level() );
+
+    // change log pattern
+    // spdlog::set_pattern("[%H:%M:%S %z] [%n][%v]");
+    //
+    // // create color multi threaded logger
+    // auto console = spdlog::stdout_color_mt("console");
+    // auto err_logger = spdlog::stderr_color_mt("stderr");
+    //
+
     // ===========================================================================================
-    std::cout << ">>> .A. Creating Track Database:" << std::endl;
+    spdlog::info(">>> .A. Creating Track Database:");
     TrackCache cache;
 
     // ===========================================================================================
-    std::cout << ">>> .B. Creating Connectors:" << std::endl;
+    spdlog::info(">>> .B. Creating Connectors:");
     
     // const std::string ais_file = "data/ais.nmea0183.2022-05-18.log";
     // const std::string ais_file = "data/ais.nmea0183.2022-05-19.log";
-    // std::cout << "    :> Creating File Connector to:" << ais_file << std::endl;
+    // spdlog::info("    :> Creating File Connector to:" << ais_file);
     // TextLogReader reader( ais_file );
 
     const std::string ais_file = "data/ais.tcpdump.2022-05-18.pcap";
-    std::cout << "    :> Creating File Connector to:" << ais_file << std::endl;
+    spdlog::info("    :> Creating File Connector to: {}", ais_file);
     readers::pcap::LogReader reader( ais_file );
     reader.set_filter_udp();
     reader.set_filter_port(4003);
     if( ! (reader.good()) ){
-        std::cerr << "!!! Could not create all connectors\n";
+        spdlog::error("!!! Could not create all connectors");
         return EXIT_FAILURE;
     }
 
     // ===========================================================================================
-    std::cout << ">>> .C. Creating Parsers:" << std::endl;
-    std::cout << "    :> Creating AIS Parser..." << std::endl;
+    spdlog::info(">>> .C. Creating Parsers:");
+    spdlog::info("    :> Creating AIS Parser...");
     parsers::nmea0183::PacketParser nmea_parser;
     parsers::ais::Parser ais_parser;
 
     // ===========================================================================================
-    std::cout << ">>> .D. Building UI: " << std::endl;
+    spdlog::info(">>> .D. Building UI: ");
     CursesInputHandler handler(cache);
     handler.update(true);
 
@@ -156,7 +166,7 @@ int main(int argc, char *argv[]){
         sleep(0.01);
     }
 
-    std::cout << cache.to_string() << std::endl;
+    spdlog::info( cache.to_string());
 
     return EXIT_SUCCESS;
 }

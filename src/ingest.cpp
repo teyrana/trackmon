@@ -3,6 +3,9 @@
 #include <vector>
 
 #include <cxxopts.hpp>
+#include <fmt/core.h>
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
 // 1st Party includes
 #include "core/track-cache.hpp"
@@ -16,27 +19,10 @@
 const static std::string binary_name = "trackmon";
 const static std::string binary_version = "0.0.1";
 
-void print_help(){
-    std::cout << "\n"
-        << "====== ====== " << binary_name << " ====== ======\n"
-        << "Synopsis\n"
-        << "-------------------------------------\n"
-        << "  This app monitors track traffic, and provides a dynamic, configurable way to inspect same.\n"
-        << "  In-app commands are displayed in the screen footer.\n"
-        << "\n"
-        << "Options:\n"
-        << "  <None>\n"
-        << "  --version,-v\n"
-        << "    Display the release version of this binary.\n"
-        << "\n";
-}
-
 int main(int argc, char *argv[]){
-
     // Create a cxxopts::Options instance.
     cxxopts::Options options("trackgest", "ingest some tracks, and debug the result");
     options.add_options()
-        // ("f,foo", "Param foo", cxxopts::value<int>()->default_value("10"))
         ("l,limit", "limit processing to this many packets.  0 (default) processes all traffic.", cxxopts::value<int>()->default_value("0"))
         ("h,help", "Print usage")
         ("v,verbose", "Verbose output")
@@ -47,16 +33,28 @@ int main(int argc, char *argv[]){
     if( clargs["Version"].as<bool>() ){
         std::cout << binary_name << "    Version: " << "0.0.1-beta" << std::endl;
         exit(0);
-    }else if (clargs["help"].as<bool>() ){
-        std::cout << options.help() << std::endl;
-        exit(0);
     }
 
-    std::cerr << "::verbosity = " << clargs["verbose"].count() << std::endl;
-    // std::cerr << "::verbosity = " << clargs["verbose"].as<int>() << std::endl;
+    // Set global log level to debug
+    if( 1 < clargs["verbose"].count()){
+        spdlog::set_level(spdlog::level::trace);
+    }else if( 0 < clargs["verbose"].count()){
+        spdlog::set_level(spdlog::level::debug);
+    }else{
+        spdlog::set_level(spdlog::level::info);
+    }
+    spdlog::debug("::verbosity = {} => {}", clargs["verbose"].count(), spdlog::get_level() );
+
+    // change log pattern
+    // spdlog::set_pattern("[%H:%M:%S %z] [%n][%v]");
+    //
+    // // create color multi threaded logger
+    // auto console = spdlog::stdout_color_mt("console");
+    // auto err_logger = spdlog::stderr_color_mt("stderr");
+    //
 
     // ===========================================================================================
-    std::cout << ">>> .A. Creating Track Database:" << std::endl;
+    spdlog::info(">>> .A. Creating Track Database:");
     TrackCache cache;
 
     // DEBUG 
@@ -65,32 +63,32 @@ int main(int argc, char *argv[]){
     // cache.transform_to_utm(true);
 
     // ===========================================================================================
-    std::cout << ">>> .B. Creating Connectors:" << std::endl;
+    spdlog::info(">>> .B. Creating Connectors:");
     
     // // const std::string ais_file = "data/ais.nmea0183.2022-05-18.log";
     // // const std::string ais_file = "data/ais.nmea0183.2022-05-19.log";
     const std::string input_pcap_file = "data/ais.tcpdump.2022-05-18.pcap";
     // const std::string input_pcap_file = "data/m2_berta.moos.pcap";
 
-    std::cout << "    >> Creating File Connector to:" << input_pcap_file << std::endl;
+    spdlog::info("    >> Creating File Connector to: {}", input_pcap_file);
     readers::pcap::LogReader reader( input_pcap_file );
     reader.set_filter_udp();
     reader.set_filter_port(4003);
 
     if( ! (reader.good()) ){
-        std::cerr << "!!! Could not create all connectors\n";
+        spdlog::error( "!!! Could not create all connectors" );
         return EXIT_FAILURE;
     }
 
     // ===========================================================================================
-    std::cout << ">>> .C. Creating Parsers:" << std::endl;
-    std::cout << "    >> Creating AIS Parser..." << std::endl;
+    spdlog::info(">>> .C. Creating Parsers:");
+    spdlog::info("    >> Creating AIS Parser...");
     parsers::nmea0183::PacketParser nmea_parser;
     parsers::ais::Parser ais_parser;
 
     // ===========================================================================================
-    std::cout << ">>> .D. Ingest Updates:\n"
-              << "    ...." << std::endl;
+    spdlog::info(">>> .D. Ingest Updates:");
+    spdlog::debug("    ....");
 
     uint32_t iteration_number = 0;
     const uint32_t iteration_limit = clargs["limit"].as<int>();
@@ -102,10 +100,10 @@ int main(int argc, char *argv[]){
         const auto chunk = reader.next();
         if( 0 == chunk.length ){
             if( not reader.good() ){
-                std::cout << "    <<< EOF" << std::endl;
+                spdlog::debug("    <<< EOF");
                 break;
             } 
-            std::cout << "    <read failure>" << std::endl;
+            spdlog::debug("    <read failure>");
             continue;
         }
 
@@ -119,7 +117,7 @@ int main(int argc, char *argv[]){
             if( line.empty() ){
                 break;
             }
-            // std::cerr << "        <<< line:    (" << line.size() << "): " << line << std::endl;
+            // spdlog::debug( "        <<< line:    ({}): {} ", line.size(), line );
 
             // .3. Pull reports out of parser until drained
             Report* report = ais_parser.parse( chunk.timestamp, line );
@@ -131,9 +129,9 @@ int main(int argc, char *argv[]){
 
         ++iteration_number;
     }
-    std::cout << "<<< .E. Finished Ingesting; Found " << update_count << " updates." << std::endl;
+    spdlog::info("<<< .E. Finished Ingesting; Found {} updates.", update_count );
 
-    std::cout << cache.to_string() << std::endl;
+    spdlog::info(cache.to_string());
 
     return EXIT_SUCCESS;
 }

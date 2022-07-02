@@ -43,14 +43,18 @@ find_package(Curses REQUIRED)
 
 find_package(cxxopts REQUIRED)
 
+find_package(fmt REQUIRED)
+
 find_package(PROJ CONFIG REQUIRED)
 
 find_package(PCAP REQUIRED)
 
+find_package(spdlog REQUIRED)
 
 # Linux Libraries
 SET(SYSTEM_LIBS
     m
+    spdlog::spdlog
     pthread )
 LINK_DIRECTORIES(/usr/local/lib)
 

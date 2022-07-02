@@ -21,10 +21,12 @@ RUN dnf makecache \
         cppcheck \
         curl \
         cxxopts-devel \
+        fmt-devel \
         gcc-c++ \
         gdb \
         git \
         proj-devel \
+        spdlog-devel \
         ninja-build \
         tar \
         valgrind \
