@@ -139,28 +139,26 @@ void CursesRenderer::render_column_contents(){
         for (auto iter = cache.cbegin(); iter != cache.cend(); ++iter) {
             const uint64_t id = iter->first;
             const Track& track = iter->second;
-            
-            const Report& report = track.last_report;
 
             int col = 0;
             for( DisplayColumn& disp : columns ){
                 if("AGE" == disp.key){
-                    const auto age = current_time - std::chrono::microseconds(report.timestamp);
+                    const auto age = current_time - std::chrono::microseconds(track.timestamp);
                     mvprintw( row, col, disp.format.c_str(), age);
                 }else if("TIME" == disp.key){
-                    mvprintw( row, col, disp.format.c_str(), report.timestamp);
+                    mvprintw( row, col, disp.format.c_str(), track.timestamp);
                 }else if("ID" == disp.key){
                     mvprintw( row, col, disp.format.c_str(), id);
                 // }else if("NAME" == disp.key){
                 // mvprintw( row, col, disp.format.c_str(), track.name.c_str());
                 }else if("LAT" == disp.key){
-                    mvprintw( row, col, disp.format.c_str(), report.latitude);
+                    mvprintw( row, col, disp.format.c_str(), track.latitude);
                 }else if("LON" == disp.key){
-                mvprintw( row, col, disp.format.c_str(), report.longitude);
-                // }else if("X" == disp.key){
-                //     mvprintw( row, col, disp.format.c_str(), report.x);
-                // }else if("Y" == disp.key){
-                //     mvprintw( row, col, disp.format.c_str(), report.y);
+                mvprintw( row, col, disp.format.c_str(), track.longitude);
+                }else if("X" == disp.key){
+                    mvprintw( row, col, disp.format.c_str(), track.easting);
+                }else if("Y" == disp.key){
+                    mvprintw( row, col, disp.format.c_str(), track.northing);
                 }
                 
                 col += disp.width;

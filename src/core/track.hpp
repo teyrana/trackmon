@@ -14,16 +14,36 @@ class Track{
 public:
     Track() = delete;
     Track(uint64_t uuid);
-    Track(const Track& other);
+
     ~Track() = default;
 
     std::string str() const;
 
-    void update( const Report& _report );
-    
-    const uint64_t id;
-    std::string name;
-    
-    Report last_report;
-    
+    void update( Report* _report );
+
+public:    
+// metadata
+    const uint64_t id = 0;
+    std::string name = "";
+    uint64_t timestamp = 0; // time in usec
+
+    int source = Report::SOURCE_SENSOR::UNKNOWN;
+    int status = 15;
+
+// position / orientation
+    double latitude = NAN;
+    double longitude = NAN;
+    /// \brief meters to the right of the origin 
+    double easting = NAN;
+    /// \brief meters upwards from the origin
+    double northing = NAN;
+    /// \brief degrees CW from true north
+    double heading = NAN;
+    /// \brief degrees CW from true north
+    double course = NAN;
+
+// velocity
+    /// \brief meters-per-second along course
+    double speed = NAN;
+
 };

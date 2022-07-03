@@ -53,7 +53,7 @@ std::string PacketParser::extract_string(){
     return std::string( data, snKey );
 }
 
-bool PacketParser::load( const readers::pcap::FrameBuffer* source ){
+bool PacketParser::load( const core::ForwardBuffer* source ){
     /// ## Source code to extract packet header:
     ///    - [simple]    https://github.com/moos-ivp/svn-mirror/blob/master/MOOS_Dec3120/MOOSCore/Core/libMOOS/Comms/MOOSCommPkt.cpp#L244
     ///    - [permalink] https://github.com/moos-ivp/svn-mirror/blob/6d630be212b26a467bd1d935c1a58feae57e044f/MOOS_Dec3120/MOOSCore/Core/libMOOS/Comms/MOOSCommPkt.cpp#L208
@@ -86,7 +86,7 @@ bool PacketParser::load( const readers::pcap::FrameBuffer* source ){
     return true;
 }
 
-std::string PacketParser::next(){
+core::StringBuffer * PacketParser::next(){
     /// [1] https://github.com/moos-ivp/svn-mirror/blob/master/MOOS_Dec3120/MOOSCore/Core/libMOOS/Comms/MOOSCommObject.cpp#L348
     /// [2] https://github.com/moos-ivp/svn-mirror/blob/master/MOOS_Dec3120/MOOSCore/Core/libMOOS/Comms/MOOSCommPkt.cpp#L244
     /// [3] Extract Bytes of each message:
@@ -142,7 +142,7 @@ std::string PacketParser::next(){
             case  '^':  // MOOS_TERMINATE_CONNECTION
                 // ignore / break
                 cursor = message_start + nLength;
-                return "";
+                return nullptr;
         }
 
         switch( cDataType ){
@@ -150,7 +150,7 @@ std::string PacketParser::next(){
                 // fall-through
             case 'D':  // DOUBLE
                 cursor = message_start + nLength;
-                return "";
+                return nullptr;
             case 'S':  // STRING
                 // fprintf( stderr, "            >> STRING value type   >>> continue >>> \n");
                 break;
@@ -166,7 +166,7 @@ std::string PacketParser::next(){
         // if( sKey == "MOOSDB_shoreside" ){
         //     std::cerr << "            << PLOGGER_STATUS << Skippping.\n";
         //     cursor = message_start + nLength;
-        //     return "";
+        //     return nullptr;
         // }
 
         // fprintf( stderr, "            ::sSrcAux:                (%2lu): %s \n", sSrcAux.length(), sSrcAux.c_str() );
@@ -186,20 +186,22 @@ std::string PacketParser::next(){
             }
             // but everything in this category -- we still just silently consume & ignore
             cursor = message_start + nLength;
-            return "";
+            return nullptr;
         }
 
         cursor += 3*sizeof(double);  // skip ahead to the string-value field
-        const std::string value = extract_string();
+        cache.str = extract_string();
         // fprintf( stderr, "                ::string-value:    (%2lu): %s \n", value.length(), value.c_str() );
         cursor = message_start + nLength;
-        return value;
 
-
+        if( cache.str.empty() ){
+            return nullptr;
+        }
+        return &cache;
     }
 
     cursor = nullptr;
-    return "";
+    return nullptr;
 }
 
 

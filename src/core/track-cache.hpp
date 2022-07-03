@@ -30,7 +30,7 @@ public:
 
     std::string to_string() const;
 
-    bool update( Report& report );
+    bool update( Report* report );
 
 
 private:
@@ -39,7 +39,7 @@ private:
 
     // Transform Latitude/Longitude to UTM Easting/Northing
     bool project_to_local( double latitude_in, double longitude_in, double& easting_out, double& northing_out );
-    Report& project_to_local( Report& rpt );
+    Report* project_to_local( Report* rpt );
     PJ_COORD project_to_local( const PJ_COORD& in_coords );
 
     // Transform Latitude/Longitude to UTM Easting/Northing

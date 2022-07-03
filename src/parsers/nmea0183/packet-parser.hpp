@@ -3,7 +3,7 @@
 #include <array>
 #include <string>
 
-#include "readers/pcap/frame-buffer.hpp"
+#include "core/buffers.hpp"
 
 namespace parsers {
 namespace nmea0183 {
@@ -17,23 +17,25 @@ public:
     
     bool empty() const;
 
-    uint32_t length() const;
-
-    bool load( const readers::pcap::FrameBuffer* source );
+    bool load( const core::ForwardBuffer* source );
 
     /// \brief returns the next network frame
     /// \return on success -- get a byte-pointer to a valid NMEA Line
     ///         on failure -- empty string.  Signifies that no valid lines are available
-    std::string next();
+    core::StringBuffer* next();
 
-    uint64_t timestamp() const;
+public:
+    uint64_t timestamp = 0;
+    size_t length = 0;
 
 private:
     const uint8_t* find_byte( const uint8_t* start, uint8_t value );
 
 private:
-    const readers::pcap::FrameBuffer* cache = nullptr;
+    uint8_t* buffer = nullptr;
     uint8_t* cursor = nullptr;
+
+    core::StringBuffer cache;
 
 };
 

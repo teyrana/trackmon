@@ -1,9 +1,6 @@
 #pragma once
 
-#include <cstdint>
-
-
-#include "readers/pcap/frame-buffer.hpp"
+#include "core/buffers.hpp"
 
 namespace parsers {
 namespace moos {
@@ -16,12 +13,12 @@ public:
 
     bool empty() const;
 
-    bool load( const readers::pcap::FrameBuffer* source );
+    bool load( const core::ForwardBuffer* source );
 
     /// \brief returns the next network frame
     /// \return on success -- get a byte-pointer to a valid NMEA Line
     ///         on failure -- empty string.  Signifies that no valid lines are available
-    std::string next();
+    core::StringBuffer* next();
 
 public:
     uint64_t timestamp = 0;
@@ -33,6 +30,8 @@ private:
 private:
     uint8_t* buffer = nullptr;
     uint8_t* cursor = nullptr;
+
+    core::StringBuffer cache;
 
 }; // class parsers::moos::PacketParser
 

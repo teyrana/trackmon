@@ -6,7 +6,7 @@
 // needed for certain handles, in class properties
 #include <pcap/pcap.h>
 
-#include "frame-buffer.hpp"
+#include "core/buffers.hpp"
 
 namespace readers {
 namespace pcap {
@@ -15,10 +15,11 @@ namespace pcap {
 ///
 /// References:
 ///   - https://www.tcpdump.org/manpages/pcap.3pcap.html
-class LogReader {
+class FileReader {
+
 public:
 
-    LogReader( const std::string& filename );
+    FileReader( const std::string& filename );
     
     bool good() const;
 
@@ -29,7 +30,7 @@ public:
 
     /// \brief returns the next network frame
     /// \return get a pointer to a valid libpcap packet entry, or `nullptr` on error or EOF
-    const FrameBuffer& next();
+    const core::ForwardBuffer* next();
 
     uint64_t timestamp() const;
 
@@ -49,7 +50,7 @@ private:
 
     pcap_t* pcap_handle_;
 
-    FrameBuffer cache;
+    core::ForwardBuffer cache;
 
 };
 

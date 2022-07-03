@@ -2,6 +2,8 @@
 #include <iostream>
 #include <sstream>
 
+#include <fmt/format.h>
+
 #include "report.hpp"
 #include "track.hpp"
 
@@ -11,23 +13,51 @@ Track::Track(uint64_t _id)
     : id(_id)
 {}
 
-Track::Track(const Track& other)
-    //: name(other.name)
-    : id(other.id)
-{}
+void Track::update(  Report* report ){
+    if( (0 == report->id) || (0 == report->timestamp)){
+        // these two fields are the minimum-valid-update:
+        return;
+    }else if( id != report->id ){
+        // id mismatch! This is an error
+        return;
+    }
 
-void Track::update( const Report& _report ){
-    last_report = _report;
+    timestamp = report->timestamp;
 
-    if( ! _report.name.empty() ){
-        name = _report.name;
+    // a report assignment should just be a naive copy-everything
+    // only if we condense into a track should we filter data....
+
+    if( 15 != report->status ){
+        status = report->status;
+    }
+
+    if( name.empty() && (!report->name.empty()) ){
+        name = report->name;
+    }
+    if( ! std::isnan(report->latitude) ){
+        latitude = report->latitude;
+        longitude = report->longitude;
+    }
+    if( ! std::isnan(report->easting) ){
+        easting = report->easting;
+        northing = report->northing;
+    }
+    
+    if( ! std::isnan(report->heading) ){
+        heading = report->heading;
+    }
+    if( ! std::isnan(report->course) ){
+        course = report->course;
+    }
+    if( ! std::isnan(speed) ){
+        speed = report->speed;
     }
 }
 
 std::string Track::str() const { 
    std::ostringstream buf;
     buf << "[" << id << "][" << name << "]  =>  ";
-    buf << "@ {" << last_report.latitude << " N Lat, " << last_report.longitude << " E Lon }";
-    buf << "// {" << last_report.easting << " Eas, " << last_report.northing << " Nor }";
+    buf << "@ {" << latitude << " N Lat, " << longitude << " E Lon }";
+    buf << "// {" << easting << " Eas, " << northing << " Nor }";
     return buf.str();
 }

@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include <proj.h>
+#include <spdlog/spdlog.h>
 
 #include "track-cache.hpp"
 
@@ -110,10 +111,13 @@ size_t TrackCache::size() const {
     return index.size();
 }
 
-bool TrackCache::update( Report& report){
+bool TrackCache::update( Report* report){
+    if( nullptr == report ){
+        return false;
+    }
 
-    // create new Track, if missing
-    const auto [track_entry, _found] = index.try_emplace(report.id, report.id);
+    // get track-by-id; if missing, create new track
+    const auto [track_entry, _found] = index.try_emplace(report->id, report->id);
 
     if( should_project ){
         report = project_to_local( report );
@@ -141,11 +145,11 @@ bool TrackCache::project_to_local( double latitude, double longitude, double& ea
     return true;
 }
 
-Report& TrackCache::project_to_local( Report& report ){
-    PJ_COORD source = proj_coord( report.latitude, report.longitude, 0, 0 );
+Report* TrackCache::project_to_local( Report* report ){
+    PJ_COORD source = proj_coord( report->latitude, report->longitude, 0, 0 );
     PJ_COORD result = project_to_local( source );
-    report.easting = result.enu.e;
-    report.northing = result.enu.n;
+    report->easting = result.enu.e;
+    report->northing = result.enu.n;
     return report;
 }
 

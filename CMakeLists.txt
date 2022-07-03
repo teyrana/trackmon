@@ -7,8 +7,8 @@ project(trackmon
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 # ===== Enable option flags: =====
-SET(ENABLE_AIS 0)
-SET(ENABLE_MOOS 1)
+SET(ENABLE_AIS 1)
+SET(ENABLE_MOOS 0)
 
 
 # ===== Find Dependencies =====

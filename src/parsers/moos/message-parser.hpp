@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "core/buffers.hpp"
 #include "core/report.hpp"
 
 namespace parsers {
@@ -21,7 +22,7 @@ public:
     ///     NAME, TIME, X, Y, LAT, LON, SPD, HDG
     /// Ignores Fields:
     ///     INDEX, DEP, LENGTH, MODE, TYPE, YAW
-    Report* parse( const std::string& line );
+    Report* parse( const core::StringBuffer& line );
 
 private:
     Report export_;

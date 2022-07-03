@@ -14,14 +14,19 @@
 
 // Project includes
 #include "core/track-cache.hpp"
-#include "readers/pcap/log-reader.hpp"
-#include "parsers/ais/parser.hpp"
-#include "parsers/moos/message-parser.hpp"
-#include "parsers/moos/packet-parser.hpp"
-#include "parsers/nmea0183/packet-parser.hpp"
-
+#include "readers/pcap/file-reader.hpp"
 #include "ui/curses-input-handler.hpp"
 #include "ui/curses-renderer.hpp"
+
+#ifdef ENABLE_AIS
+#include "parsers/ais/parser.hpp"
+#include "parsers/nmea0183/packet-parser.hpp"
+#endif
+
+#ifdef ENABLE_MOOS
+#include "parsers/moos/message-parser.hpp"
+#include "parsers/moos/packet-parser.hpp"
+#endif
 
 const static std::string binary_name = "trackmon";
 const static std::string binary_version = "0.0.2";
@@ -133,7 +138,7 @@ int main(int argc, char *argv[]){
 #ifdef ENABLE_AIS
     // // const std::string ais_file = "data/ais.nmea0183.2022-05-18.log";
     // // const std::string ais_file = "data/ais.nmea0183.2022-05-19.log";
-    // const std::string input_pcap_file = "data/ais.tcpdump.2022-05-18.pcap";
+    const std::string input_pcap_file = "data/ais.tcpdump.2022-05-18.pcap";
 #endif
 
 #ifdef ENABLE_MOOS
@@ -143,7 +148,7 @@ int main(int argc, char *argv[]){
 #endif
 
     spdlog::info("    :> Creating File Connector to: {}", input_pcap_file);
-    readers::pcap::LogReader reader( input_pcap_file );
+    readers::pcap::FileReader reader( input_pcap_file );
     if( ! (reader.good()) ){
         spdlog::error("!!! Could not create all connectors");
         return EXIT_FAILURE;
@@ -180,8 +185,8 @@ int main(int argc, char *argv[]){
 
     // ===========================================================================================
 
-    uint32_t interval_update_count;
-    uint32_t interval_start;
+    // uint32_t interval_update_count;
+    // clock::time_point interval_start;
 
     using clock = std::chrono::system_clock;
     const std::chrono::milliseconds render_blackout(20);  // wait at least this much time between render calls
@@ -189,29 +194,29 @@ int main(int argc, char *argv[]){
     auto last_render_timestamp = clock::now();
     auto last_change_timestamp = last_render_timestamp;
     while(run){
-        // .1. get next data chunk
-        const auto chunk = reader.next();
-        if( 0 < chunk.length ){
+        // // .1. get next data chunk
+        // const auto chunk = reader.next();
+        // if( 0 < chunk.length ){
 
-            // .2. Load next chunk into parser
-            moos_packet_parser.load( &chunk );
+        //     // .2. Load next chunk into parser
+        //     moos_packet_parser.load( &chunk );
 
-            // .3. Pull reports from packet until empty
-            while( ! moos_packet_parser.empty() ){
-                const std::string line = moos_packet_parser.next();
-                if( line.empty() ){
-                    continue;
-                }
+        //     // .3. Pull reports from packet until empty
+        //     while( ! moos_packet_parser.empty() ){
+        //         const std::string line = moos_packet_parser.next();
+        //         if( line.empty() ){
+        //             continue;
+        //         }
 
-                // .3. Pull reports out of parser until drained
-                Report* report = moos_report_parser.parse( line );
-                if( report ){
-                    cache.update( *report );
-                    last_change_timestamp = clock::now();
-                    ++interval_update_count;
-                }
-            }
-        }
+        //         // .3. Pull reports out of parser until drained
+        //         Report* report = moos_report_parser.parse( line );
+        //         if( report ){
+        //             cache.update( *report );
+        //             last_change_timestamp = clock::now();
+        //             ++interval_update_count;
+        //         }
+        //     }
+        // }
 
         bool pending_changes = false;
         // (a) check if any update exists since the last render...

@@ -6,9 +6,7 @@
 class Report {
 public:
     Report() = default;
-    Report(std::string _name, uint64_t _id, double _ts,
-                double _x, double _y, double _heading,
-                double _course, double _speed);
+    
     ~Report() = default;
 
     Report& operator=( const Report& other );

@@ -13,7 +13,7 @@
 #include <pcap/pcap.h>
 #include <spdlog/spdlog.h>
 
-#include "log-reader.hpp"
+#include "file-reader.hpp"
 
 static char error_message_buffer[PCAP_ERRBUF_SIZE];
 
@@ -26,7 +26,7 @@ static constexpr size_t udp_header_length = sizeof(struct udphdr);
 static_assert( udp_header_length == 8, "UDP Header size does not match??");
 
 
-LogReader::LogReader( const std::string& filename )
+FileReader::FileReader( const std::string& filename )
     : layer_2_protocol_(DLT_NULL)
     , eof(true)
     , filter_layer_4_proto(0)
@@ -38,15 +38,15 @@ LogReader::LogReader( const std::string& filename )
     open( filename );
 }
 
-bool LogReader::good() const {
+bool FileReader::good() const {
     return ( (nullptr!=pcap_handle_) && (!eof) );
 }
 
-uint32_t LogReader::length() const {
+uint32_t FileReader::length() const {
     return this->cache.length;
 }
 
-bool LogReader::open( const std::string& filename ){
+bool FileReader::open( const std::string& filename ){
     if( ! std::filesystem::exists(std::filesystem::path(filename))){
         std::cerr << "?!? file is missing: " << filename << '\n';
         std::cerr << "::cwd: " << std::filesystem::current_path().string() << '\n';
@@ -63,7 +63,7 @@ bool LogReader::open( const std::string& filename ){
     return false;
 }
 
-const FrameBuffer& LogReader::next() {
+const core::ForwardBuffer* FileReader::next() {
     pcap_pkthdr * frame_header;
     const uint8_t * read_buffer;
     const int result = pcap_next_ex( pcap_handle_, &frame_header, &read_buffer );
@@ -72,13 +72,12 @@ const FrameBuffer& LogReader::next() {
     }else if( -2 == result ){
         // End-Of-File (EOF): No more packets
         eof = true;
-        cache.length = 0;
-        return cache;
+        return nullptr;
     } else {
         std::cerr << "    !!Unrecognized error from 'pcap_next_ex'...." << result << std::endl;
         pcap_perror( pcap_handle_, "" ); ///< print error to stderr
         cache.length = 0;
-        return cache;
+        return nullptr;
     }
 
     // std::cerr << "    ::DATALINK-LAYER-TYPE: " << layer_2_protocol_ << std::endl;
@@ -103,7 +102,7 @@ const FrameBuffer& LogReader::next() {
             if( 0x45 != read_buffer[ipv4_header_offset]){
                 std::cerr << "IPv4 Header was not in the expected location!?" << std::endl;
                 cache.length = 0;
-                return cache;
+                return nullptr;
             }
             break;
         }
@@ -112,7 +111,7 @@ const FrameBuffer& LogReader::next() {
         case ETH_P_IPV6:
             // code does not handle these protocols. Ignore and return an error:
             cache.length = 0;
-            return cache;
+            return nullptr;
         default:
             fprintf( stderr, "<<!! Found Unknown Layer 3 Protocol: %ud == %04xh\n", layer_3_protocol, layer_3_protocol );
             fprintf( stderr, "<<!! Path not implemented for Layer 3 Protocol!!\n");
@@ -159,7 +158,7 @@ const FrameBuffer& LogReader::next() {
             // fprintf( stderr, "        ::packet:|%lu|...\n", cache.length);
             cache.buffer = const_cast<uint8_t*>(read_buffer + payload_offset);
             // fprintf( stderr, "        ::pay:: [@ %2ld]: %02x %02x %02x %02x\n", payload_offset, payload[0], payload[1], payload[2], payload[3] );
-            return cache;
+            return &cache;
         }
         case IPPROTO_UDP:{
             // reference: https://en.wikipedia.org/wiki/User_Datagram_Protocol
@@ -178,7 +177,7 @@ const FrameBuffer& LogReader::next() {
                 const size_t data_offset = ipv4_header_offset + ipv4_header_length + udp_header_length;
                 cache.length = frame_header->len - data_offset;
                 cache.buffer = const_cast<uint8_t*>(read_buffer + data_offset);
-                return cache;
+                return &cache;
             }else{
                 spdlog::trace( "    !?!? Port mismatch on UDP packet!   found: {:d} =/= {:d} :filter", udp_dest_port, filter_layer_4_port );
                 break; // abort
@@ -195,25 +194,25 @@ const FrameBuffer& LogReader::next() {
 
     // Failure Clean Up
     cache.length = 0;
-    return cache;
+    return nullptr;
 }
 
-bool LogReader::set_filter_tcp(){
+bool FileReader::set_filter_tcp(){
     filter_layer_4_proto = IPPROTO_TCP;
     return true;
 }
 
-bool LogReader::set_filter_udp(){
+bool FileReader::set_filter_udp(){
     filter_layer_4_proto = IPPROTO_UDP;
     return true;
 }
 
-bool LogReader::set_filter_port( uint16_t next_filter_port ){
+bool FileReader::set_filter_port( uint16_t next_filter_port ){
     filter_layer_4_port = next_filter_port;
     return true;
 }
 
-uint64_t LogReader::timestamp() const {
+uint64_t FileReader::timestamp() const {
   return cache.timestamp;
 }
 

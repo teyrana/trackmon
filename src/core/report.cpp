@@ -11,14 +11,6 @@
 using std::isnan;
 using std::atof;
 
-Report::Report( std::string _name, uint64_t _id, double _ts,
-                double _x, double _y, double _heading, 
-                double _course, double _speed)
-    : name(_name), id(_id), timestamp(_ts)
-    //, latitude(NAN), longitude(NAN)
-    , easting(_x), northing(_y)
-    , heading(_heading), course(_course), speed(_speed)
-{}
 
 Report& Report::operator=( const Report& other ){
     // these two fields are the minimum-valid-update:

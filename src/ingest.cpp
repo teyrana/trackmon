@@ -1,6 +1,8 @@
 // Standard Library Includes
+#include <chrono>
 #include <iostream>
 #include <string>
+#include <deque>
 #include <vector>
 
 // Dependency Includes
@@ -11,12 +13,17 @@
 
 // Project Includes
 #include "core/track-cache.hpp"
-#include "readers/pcap/log-reader.hpp"
-// #include "readers/nmea0183/text-log-reader.hpp"
+#include "readers/pcap/file-reader.hpp"
+
+#ifdef ENABLE_AIS
 #include "parsers/ais/parser.hpp"
+#include "parsers/nmea0183/packet-parser.hpp"
+#endif
+
+#ifdef ENABLE_MOOS
 #include "parsers/moos/message-parser.hpp"
 #include "parsers/moos/packet-parser.hpp"
-#include "parsers/nmea0183/packet-parser.hpp"
+#endif
 
 const static std::string binary_name = "trackmon";
 const static std::string binary_version = "0.0.1";
@@ -99,11 +106,10 @@ int main(int argc, char *argv[]){
 
     // ===========================================================================================
     spdlog::info(">>> .B. Creating Connectors:");
+    std::deque<const core::ForwardBuffer*> packets;
 
 #ifdef ENABLE_AIS
-    // // const std::string ais_file = "data/ais.nmea0183.2022-05-18.log";
-    // // const std::string ais_file = "data/ais.nmea0183.2022-05-19.log";
-    // const std::string input_pcap_file = "data/ais.tcpdump.2022-05-18.pcap";
+    const std::string input_pcap_file = "data/ais.tcpdump.2022-05-18.pcap";
 #endif
 
 #ifdef ENABLE_MOOS
@@ -113,23 +119,30 @@ int main(int argc, char *argv[]){
 #endif
 
     spdlog::info("    >> Creating File Connector to: {}", input_pcap_file);
-    readers::pcap::LogReader reader( input_pcap_file );
+    readers::pcap::FileReader reader( input_pcap_file );
+
+#ifdef ENABLE_AIS
+    reader.set_filter_udp();
+    reader.set_filter_port(4003);
+#endif 
+#ifdef ENABLE_MOOS
     reader.set_filter_tcp();
-
-    // // all of these exist, but I'm not sure which I care about, yet... TBD
     reader.set_filter_port(9000);
+#endif
 
-    if( ! (reader.good()) ){
+    if( ! reader.good() ){
         spdlog::error( "!!! Could not create all connectors" );
         return EXIT_FAILURE;
     }
 
     // ===========================================================================================
     spdlog::info(">>> .C. Creating Parsers:");
+    std::deque<const core::StringBuffer*> messages;
+
 #ifdef ENABLE_AIS
     spdlog::info("    >> Creating AIS Parser...");
-    parsers::NMEA0183::NMEA0183PacketParser nmea_parser;
-    parsers::AIS::AISParser ais_parser;
+    parsers::nmea0183::PacketParser nmea_packet_parser;
+    parsers::ais::Parser ais_message_parser;
 #endif
 
 #ifdef ENABLE_MOOS
@@ -151,36 +164,76 @@ int main(int argc, char *argv[]){
         // spdlog::trace("    @ {:4d}\n", iteration_number );
 
         // .1. get next data chunk
-        const auto chunk = reader.next();
-        if( 0 == chunk.length ){
-            if( not reader.good() ){
-                spdlog::warn("    <<< @{:4d} -- EOF", iteration_number );
-                break;
-            } 
-            // spdlog::trace( "    <<< @{:4d} -- Skip\n", iteration_number );
-            continue;
+        const core::ForwardBuffer* chunk = reader.next();
+        if( (nullptr != chunk) && (0 < chunk->length) ){
+            packets.push_back(chunk);
         }
-        // spdlog::debug( "    >>>> @{:4d}", iteration_number );
 
-        // .2. Load next packet into parser
-        moos_packet_parser.load( &chunk );
-        
-        // .3. Pull MOOS Messages out of packet; until empty
-        while( ! moos_packet_parser.empty() ){
-            const std::string line = moos_packet_parser.next();
-            if( line.empty() ){
-                // spdlog::trace("        <<<");
-                continue;
+        // simple termination condition -- expand if we ever want multiple readers at once
+        if( not reader.good() ){
+            spdlog::warn("    <<< @{:4d} -- EOF", iteration_number );
+            break;
+        }
+
+        // .2. convert data buffers to discrete packets
+        while( 0 < packets.size() ){
+            // .2.a. Pop each packet from queue of available packets
+            const auto* each_packet = packets.front();
+            packets.pop_front();
+
+            // vvvv DEBUG
+            // if( 1500 < chunk.length ){
+            //     spdlog::warn("    length greater than MTU=={}    @{:4d}", chunk.length, iteration_number );
+            // }
+            // ^^^^ DEBUG
+
+#ifdef ENABLE_AIS
+            // .2.b. Load packet into parser and pull messages until empty
+            // .2.c. Pull messages out of parser; until empty
+            nmea_packet_parser.load( each_packet );
+            while( ! nmea_packet_parser.empty() ){
+                const auto* line = nmea_packet_parser.next();
+                if(line){
+                    messages.push_back(line);
+                }
             }
+#endif
+#ifdef ENABLE_MOOS
+            // .2.b. Load packet into parser and pull messages until empty
+            // .2.c. Pull messages out of parser; until empty
+            moos_packet_parser.load( each_packet );
+            while( ! moos_packet_parser.empty() ){
+                const auto* line = moos_packet_parser.next();
+                if(line){
+                    messages.push_back(line);
+                }
+            }
+#endif
+        }
 
-            // .3. Pull reports out of parser until drained
-            Report* report = moos_report_parser.parse( line );
+        // .3. convert data buffers to discrete packets
+        while( 0 < messages.size() ){
+            // .3.a. Pop each packet from the queue of available messages
+            const core::StringBuffer& next_message = *messages.front();
+            messages.pop_front();
+
+            // spdlog::debug( "        ##: {}", *each_line );
+
+            // .3.b. Pull reports out of parser until drained
+#ifdef ENABLE_AIS
+            Report* report = ais_message_parser.parse( next_message );
+#endif
+#ifdef ENABLE_MOOS
+            Report* report = moos_report_parser.parse( next_message );
+#endif
+
             if( report ){
-                cache.update( *report );
+                cache.update( report );
                 ++update_count;
             }
         }
 
+        // {
         // // .2. Load next chunk into parser
         // // TODO: make this more functional
         // nmea_parser.load( &chunk );
@@ -193,14 +246,7 @@ int main(int argc, char *argv[]){
         //     }
         //     // std::cerr << "        <<< line:    (" << line.size() << "): " << line << std::endl;
         //
-        //     // .3. Pull reports out of parser until drained
-        //     Report* report = ais_parser.parse( line );
-        //     if( report ){
-        //         report -> timestamp = chunk.timestamp
-        //         cache.update( *report );
-        //         ++update_count;
-        //     }
-        // }
+    
     }
     spdlog::info("<<< .E. Finished Ingesting; Found {} updates.", update_count );
 
