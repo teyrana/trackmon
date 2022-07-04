@@ -40,6 +40,8 @@ public:
 
     bool set_filter_port( uint16_t next_port);
 
+    bool set_output_type( core::BinaryBufferEnum next_port);
+
 private:
     int layer_2_protocol_;
     bool eof;
@@ -50,6 +52,7 @@ private:
 
     pcap_t* pcap_handle_;
 
+    core::BinaryBufferEnum output_type_;
     core::ForwardBuffer cache;
 
 };

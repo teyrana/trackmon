@@ -12,18 +12,13 @@
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 // Project Includes
+#include "core/buffers.hpp"
 #include "core/track-cache.hpp"
-#include "readers/pcap/file-reader.hpp"
-
-#ifdef ENABLE_AIS
 #include "parsers/ais/parser.hpp"
-#include "parsers/nmea0183/packet-parser.hpp"
-#endif
-
-#ifdef ENABLE_MOOS
 #include "parsers/moos/message-parser.hpp"
 #include "parsers/moos/packet-parser.hpp"
-#endif
+#include "parsers/nmea0183/packet-parser.hpp"
+#include "readers/pcap/file-reader.hpp"
 
 const static std::string binary_name = "trackmon";
 const static std::string binary_version = "0.0.1";
@@ -124,10 +119,13 @@ int main(int argc, char *argv[]){
 #ifdef ENABLE_AIS
     reader.set_filter_udp();
     reader.set_filter_port(4003);
+    reader.set_output_type( core::BinaryBufferEnum::BUFFER_BINARY_AIS );
+
 #endif 
 #ifdef ENABLE_MOOS
     reader.set_filter_tcp();
     reader.set_filter_port(9000);
+    reader.set_output_type( core::BinaryBufferEnum::BUFFER_BINARY_MOOS );
 #endif
 
     if( ! reader.good() ){
@@ -139,18 +137,15 @@ int main(int argc, char *argv[]){
     spdlog::info(">>> .C. Creating Parsers:");
     std::deque<const core::StringBuffer*> messages;
 
-#ifdef ENABLE_AIS
-    spdlog::info("    >> Creating AIS Parser...");
+    spdlog::info( "    >> Creating NMEA-0183 Packet Parser..." );
     parsers::nmea0183::PacketParser nmea_packet_parser;
-    parsers::ais::Parser ais_message_parser;
-#endif
+    spdlog::info( "    >> Creating AIS Parser...");
+    parsers::ais::Parser ais_report_parser;
 
-#ifdef ENABLE_MOOS
     spdlog::info( "    >> Creating MOOS Parser..." );
     parsers::moos::PacketParser moos_packet_parser;
     spdlog::info( "    >> Creating Node-Report Parser..." );
     parsers::moos::MessageParser moos_report_parser;
-#endif
 
     // ===========================================================================================
     spdlog::info(">>> .D. Ingest Updates:");
@@ -177,7 +172,6 @@ int main(int argc, char *argv[]){
 
         // .2. convert data buffers to discrete packets
         while( 0 < packets.size() ){
-            // .2.a. Pop each packet from queue of available packets
             const auto* each_packet = packets.front();
             packets.pop_front();
 
@@ -187,28 +181,32 @@ int main(int argc, char *argv[]){
             // }
             // ^^^^ DEBUG
 
-#ifdef ENABLE_AIS
-            // .2.b. Load packet into parser and pull messages until empty
-            // .2.c. Pull messages out of parser; until empty
-            nmea_packet_parser.load( each_packet );
-            while( ! nmea_packet_parser.empty() ){
-                const auto* line = nmea_packet_parser.next();
-                if(line){
-                    messages.push_back(line);
-                }
+            switch( each_packet->type ){
+                case core::BUFFER_BINARY_AIS:
+                    // Load packet into parser and pull messages until empty
+                    nmea_packet_parser.load( each_packet );
+                    while( ! nmea_packet_parser.empty() ){
+                        const auto* line = nmea_packet_parser.next();
+                        if(line){
+                            messages.push_back(line);
+                        }
+                    }
+                    break;
+                case core::BUFFER_BINARY_MOOS:
+                    // Load packet into parser and pull messages until empty
+                    moos_packet_parser.load( each_packet );
+                    while( ! moos_packet_parser.empty() ){
+                        const auto* line = moos_packet_parser.next();
+                        if(line){
+                            messages.push_back(line);
+                        }
+                    }
+                    break;
+                default:
+                    spdlog::warn("!!! [@{:4d}]: Unknown Binary Buffer type!?: {}", iteration_number, each_packet->type );
+                    continue;
+                    break;
             }
-#endif
-#ifdef ENABLE_MOOS
-            // .2.b. Load packet into parser and pull messages until empty
-            // .2.c. Pull messages out of parser; until empty
-            moos_packet_parser.load( each_packet );
-            while( ! moos_packet_parser.empty() ){
-                const auto* line = moos_packet_parser.next();
-                if(line){
-                    messages.push_back(line);
-                }
-            }
-#endif
         }
 
         // .3. convert data buffers to discrete packets
@@ -217,15 +215,20 @@ int main(int argc, char *argv[]){
             const core::StringBuffer& next_message = *messages.front();
             messages.pop_front();
 
-            // spdlog::debug( "        ##: {}", *each_line );
-
             // .3.b. Pull reports out of parser until drained
-#ifdef ENABLE_AIS
-            Report* report = ais_message_parser.parse( next_message );
-#endif
-#ifdef ENABLE_MOOS
-            Report* report = moos_report_parser.parse( next_message );
-#endif
+            Report* report = nullptr;
+            switch( next_message.type ){
+                case core::BUFFER_TEXT_AIS:
+                    report = ais_report_parser.parse( next_message );
+                    //     spdlog::debug("....parsed report to: (t={}) @ ( {}, {})", report->timestamp, report->latitude, report->longitude );
+                    break;
+                case core::BUFFER_TEXT_MOOS:
+                    report = moos_report_parser.parse( next_message );
+                    break;
+                default:
+                    spdlog::warn("!!! [@{:4d}]: Unknown Binary Buffer type!?: {}", iteration_number, next_message.type );
+                    break;
+            }
 
             if( report ){
                 cache.update( report );

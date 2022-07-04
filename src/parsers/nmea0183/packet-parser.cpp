@@ -27,11 +27,14 @@ const uint8_t* PacketParser::find_byte( const uint8_t* find_start, uint8_t value
 }
 
 bool PacketParser::load( const core::ForwardBuffer* source ){
-    timestamp = source->timestamp;
     length = source->length;
     buffer = source->buffer;
 
     cursor = source->buffer;
+
+    cache.timestamp = source->timestamp;
+    cache.type = core::BUFFER_TEXT_AIS;
+
     return true;
 }
 

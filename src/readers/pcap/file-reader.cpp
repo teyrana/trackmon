@@ -154,6 +154,7 @@ const core::ForwardBuffer* FileReader::next() {
             const uint8_t tcp_header_length =  4 * ( 0xF0 & *(read_buffer + tcp_header_offset + 12)) >> 4;
             const size_t payload_offset = tcp_header_offset + tcp_header_length;
 
+            cache.type = output_type_;
             cache.length = frame_header->len - payload_offset;
             // fprintf( stderr, "        ::packet:|%lu|...\n", cache.length);
             cache.buffer = const_cast<uint8_t*>(read_buffer + payload_offset);
@@ -175,6 +176,7 @@ const core::ForwardBuffer* FileReader::next() {
 
             if( filter_layer_4_port == udp_dest_port ){
                 const size_t data_offset = ipv4_header_offset + ipv4_header_length + udp_header_length;
+                cache.type = output_type_;
                 cache.length = frame_header->len - data_offset;
                 cache.buffer = const_cast<uint8_t*>(read_buffer + data_offset);
                 return &cache;
@@ -212,8 +214,9 @@ bool FileReader::set_filter_port( uint16_t next_filter_port ){
     return true;
 }
 
-uint64_t FileReader::timestamp() const {
-  return cache.timestamp;
+bool FileReader::set_output_type( core::BinaryBufferEnum output_enum_type ){
+    output_type_ = output_enum_type;
+    return true;
 }
 
 }  // namespace pcap

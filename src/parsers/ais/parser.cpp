@@ -52,7 +52,7 @@ Report* Parser::parse( const core::StringBuffer& source ) {
         return nullptr;
     }
 
-    // spdlog::debug( "            >>> @parse: {}", sentence );
+    // spdlog::debug( "        >>> @parse: {}", sentence );
 
     const std::string body = libais::GetBody( sentence );
 
@@ -78,6 +78,7 @@ Report* Parser::parse( const core::StringBuffer& source ) {
 
     // get track from db
     // auto report => db.get_track(msg->mmsi);
+    // spdlog::debug( "            ::AIS Message <{}>", msg->message_id );
     switch(msg->message_id){
         case 1:
         case 2: 

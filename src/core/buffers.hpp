@@ -6,11 +6,26 @@
 
 namespace core {
 
+enum BinaryBufferEnum {
+    BUFFER_BINARY_AIS=2,
+    BUFFER_BINARY_MOOS=3,
+    BUFFER_BINARY_PCAP=4,
+    BUFFER_BINARY_UNKNOWN=0
+};
+
+enum TextBufferEnum {
+    BUFFER_TEXT_AIS=1,
+    BUFFER_TEXT_NMEA=5,
+    BUFFER_TEXT_MOOS=7,
+    BUFFER_TEXT_UNKNOWN=0
+};
+
 class ForwardBuffer {
 public:
-    uint64_t timestamp;
-    size_t length;
-    uint8_t * buffer;
+    uint8_t * buffer = nullptr;
+    size_t length = 0;
+    uint64_t timestamp = 0;
+    BinaryBufferEnum type = BUFFER_BINARY_UNKNOWN;
 
 public:
     inline void reset(){ 
@@ -22,8 +37,9 @@ public:
 
 class StringBuffer {
 public:
-    uint64_t timestamp;
     std::string str;
+    uint64_t timestamp = 0;
+    TextBufferEnum type = BUFFER_TEXT_UNKNOWN;
 };
 
 }  // namespace core

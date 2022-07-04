@@ -25,7 +25,6 @@ public:
     core::StringBuffer* next();
 
 public:
-    uint64_t timestamp = 0;
     size_t length = 0;
 
 private:

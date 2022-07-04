@@ -58,7 +58,6 @@ bool PacketParser::load( const core::ForwardBuffer* source ){
     ///    - [simple]    https://github.com/moos-ivp/svn-mirror/blob/master/MOOS_Dec3120/MOOSCore/Core/libMOOS/Comms/MOOSCommPkt.cpp#L244
     ///    - [permalink] https://github.com/moos-ivp/svn-mirror/blob/6d630be212b26a467bd1d935c1a58feae57e044f/MOOS_Dec3120/MOOSCore/Core/libMOOS/Comms/MOOSCommPkt.cpp#L208
 
-    timestamp = source->timestamp;
     length = source->length;
     buffer = source->buffer;
     cursor = source->buffer + packet_header_length;
@@ -82,6 +81,9 @@ bool PacketParser::load( const core::ForwardBuffer* source ){
         // assert( (packet_header->byte_length == length) && " both lengths should match!?");
         length = packet_header->byte_length;
     }
+
+    cache.timestamp = source->timestamp;
+    cache.type = core::BUFFER_TEXT_MOOS;
 
     return true;
 }
