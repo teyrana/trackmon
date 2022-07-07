@@ -2,11 +2,13 @@
 
 #include <chrono>
 #include <string>
-// #include <memory>
 
-#include "curses-renderer.hpp"
+#include "renderer.hpp"
 
-using std::string;
+
+
+namespace ui {
+namespace curses {
 
 class CursesInputHandler
 {
@@ -32,3 +34,6 @@ class CursesInputHandler
         std::chrono::system_clock::time_point last_update_;
 
 };
+
+}  // namespace curses
+}  // namespace ui

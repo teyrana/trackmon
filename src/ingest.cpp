@@ -20,6 +20,8 @@
 #include "parsers/nmea0183/packet-parser.hpp"
 #include "readers/pcap/file-reader.hpp"
 
+#include "ui/console/renderer.hpp"
+
 const static std::string binary_name = "trackmon";
 const static std::string binary_version = "0.0.1";
 
@@ -93,8 +95,9 @@ int main(int argc, char *argv[]){
     spdlog::info(">>> .A. Creating Track Database:");
     TrackCache cache;
 
-    // DEBUG 
-    // cache.set_origin( 29.712372, -91.880144 );  // Origin for AIS Data
+#ifdef ENABLE_AIS
+    cache.set_origin( 29.712372, -91.880144 );  // Origin for AIS Data
+#endif
 
     // cache.set_origin(42.357591,-71.082075);  // middle of Charles River Basin
     // cache.transform_to_utm(true);
@@ -148,7 +151,11 @@ int main(int argc, char *argv[]){
     parsers::moos::MessageParser moos_report_parser;
 
     // ===========================================================================================
-    spdlog::info(">>> .D. Ingest Updates:");
+    spdlog::info(">>> .D. Create Renderer:");
+    ui::console::ConsoleRenderer renderer( cache );
+
+    // ===========================================================================================
+    spdlog::info(">>> .E. Ingest Updates:");
 
     uint32_t iteration_number = 0;
     const uint32_t iteration_limit = clargs["limit"].as<int>();
@@ -253,7 +260,7 @@ int main(int argc, char *argv[]){
     }
     spdlog::info("<<< .E. Finished Ingesting; Found {} updates.", update_count );
 
-    spdlog::info(cache.to_string());
+    renderer.render();
 
     return EXIT_SUCCESS;
 }

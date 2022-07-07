@@ -1,7 +1,14 @@
+// Standard Library Includes
+
+// External Dependency Includes
 #include <ncurses.h>
 
-#include "curses-input-handler.hpp"
-#include "curses-renderer.hpp"
+// Project Includes
+#include "input-handler.hpp"
+#include "renderer.hpp"
+
+namespace ui {
+namespace curses {
 
 CursesInputHandler::CursesInputHandler(TrackCache& cache)
     : renderer(cache)
@@ -104,4 +111,7 @@ std::chrono::system_clock::time_point CursesInputHandler::update( bool changed )
 
     return last_update_;
 }
+
+}  // namespace curses
+}  // namespace ui
 

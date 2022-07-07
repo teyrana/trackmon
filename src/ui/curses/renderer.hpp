@@ -9,14 +9,15 @@
 #include "ui/display-column.hpp"
 
 
-using std::string;
+namespace ui {
+namespace curses {
 
 class CursesRenderer
 {
     public:
         CursesRenderer() = delete;
 
-        CursesRenderer(TrackCache& cache);
+        CursesRenderer( TrackCache& cache);
 
         ~CursesRenderer() = default;
 
@@ -52,7 +53,7 @@ class CursesRenderer
         static const int status_line_offset = -1;
 
         TrackCache& cache;
-        std::vector<DisplayColumn> columns;
+        std::vector<const DisplayColumn*> columns;
         char command_key;
         constexpr static size_t command_result_buffer_length = 128;
         char command_result[command_result_buffer_length];
@@ -62,3 +63,6 @@ class CursesRenderer
         bool render_help;
 
 };
+
+}  // namespace curses
+}  // namespace ui

@@ -5,7 +5,11 @@
 #include <ncurses.h>
 #include <signal.h>
 
-#include "curses-renderer.hpp"
+#include "renderer.hpp"
+
+
+namespace ui {
+namespace curses {
 
 /* If an xterm is resized the contents on your text windows might be messed up.
 To handle this gracefully you should redraw all the stuff based on the new
@@ -33,16 +37,16 @@ CursesRenderer::CursesRenderer(TrackCache& _cache)
     // SIGWINCH ~= SIGnal-WINdow-CHange
     signal(SIGWINCH, resizeHandler);
 
-    // columns.emplace(? "Source", 
-    columns.emplace_back("ID", "Id", "%ld", 20);
-    // columns.emplace_back("TIME", "Time", "%g", 12);
-    columns.emplace_back("AGE", "Time", "%+9.8g", 12);
-    columns.emplace_back("NAME", "Name", "%-20s", 20);
-    //columns.emplace_back("X", "X", "%+9.2g", 10);
-    //columns.emplace_back("Y", "Y", "%+9.2g", 10);
+    // // columns.emplace(? "Source", 
+    // columns.emplace_back("ID", "Id", "%ld", 20);
+    // // columns.emplace_back("TIME", "Time", "%g", 12);
+    // columns.emplace_back("AGE", "Time", "%+9.8g", 12);
+    // columns.emplace_back("NAME", "Name", "%-20s", 20);
+    // //columns.emplace_back("X", "X", "%+9.2g", 10);
+    // //columns.emplace_back("Y", "Y", "%+9.2g", 10);
 
-    columns.emplace_back("LAT", "Latitude", "%+9.2g", 10);
-    columns.emplace_back("LON", "Longitude", "%+9.2g", 10);
+    // columns.emplace_back("LAT", "Latitude", "%+9.2g", 10);
+    // columns.emplace_back("LON", "Longitude", "%+9.2g", 10);
     
     // mvprintw(0,0,"Source             Time                Name        X / Y            Latitude / Longitude    ");
 }
@@ -118,9 +122,9 @@ void CursesRenderer::render_status_bar(){
 void CursesRenderer::render_column_headers(){
     // mvprintw(0,0,"Source             Time                Name        X / Y            Latitude / Longitude    ");
     int col = 0;
-    for( DisplayColumn& disp : columns ){
-        mvprintw( 0, col, disp.title.c_str());
-        col += disp.width;
+    for( const DisplayColumn* disp : columns ){
+        mvprintw( 0, col, disp->title.c_str());
+        col += disp->width;
     }
 
     // draw a horizontal rule <hr> between the Column Titles and the data
@@ -141,27 +145,31 @@ void CursesRenderer::render_column_contents(){
             const Track& track = iter->second;
 
             int col = 0;
-            for( DisplayColumn& disp : columns ){
-                if("AGE" == disp.key){
+            for( const ui::DisplayColumn* disp : columns ){
+                const char* format = disp->format.c_str();
+                const std::string& key = disp->key;
+
+
+                if("AGE" == key){
                     const auto age = current_time - std::chrono::microseconds(track.timestamp);
-                    mvprintw( row, col, disp.format.c_str(), age);
-                }else if("TIME" == disp.key){
-                    mvprintw( row, col, disp.format.c_str(), track.timestamp);
-                }else if("ID" == disp.key){
-                    mvprintw( row, col, disp.format.c_str(), id);
-                // }else if("NAME" == disp.key){
-                // mvprintw( row, col, disp.format.c_str(), track.name.c_str());
-                }else if("LAT" == disp.key){
-                    mvprintw( row, col, disp.format.c_str(), track.latitude);
-                }else if("LON" == disp.key){
-                mvprintw( row, col, disp.format.c_str(), track.longitude);
-                }else if("X" == disp.key){
-                    mvprintw( row, col, disp.format.c_str(), track.easting);
-                }else if("Y" == disp.key){
-                    mvprintw( row, col, disp.format.c_str(), track.northing);
+                    mvprintw( row, col, format, age);
+                }else if("TIME" == key){
+                    mvprintw( row, col, format, track.timestamp);
+                }else if("ID" == key){
+                    mvprintw( row, col, format, id);
+                }else if("NAME" == key){
+                    mvprintw( row, col, format, track.name.c_str());
+                }else if("LAT" == key){
+                    mvprintw( row, col, format, track.latitude);
+                }else if("LON" == key){
+                    mvprintw( row, col, format, track.longitude);
+                }else if("X" == key){
+                    mvprintw( row, col, format, track.easting);
+                }else if("Y" == key){
+                    mvprintw( row, col, format, track.northing);
                 }
                 
-                col += disp.width;
+                col += disp->width;
             }
             ++row;
         }
@@ -219,3 +227,6 @@ void CursesRenderer::render(){
 
     refresh();    // Print it on to the real screen
 }
+
+}  // namespace curses
+}  // namespace ui

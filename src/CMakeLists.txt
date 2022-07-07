@@ -42,7 +42,7 @@ TARGET_LINK_LIBRARIES(${CORE_LIB_NAME} PRIVATE
 )
 SET( CORE_LIBS ${CORE_LIB_NAME} )
 
-# ====== Parser Libraries ======
+# ====== ====== ====== ====== Parser Libraries ====== ====== ====== ======
 
 ## ====== AIS Parser Library ======
 SET(AIS_PARSE_LIB_NAME "${BASE_NAME}-ais-parser")
@@ -86,41 +86,40 @@ TARGET_LINK_LIBRARIES(${NMEA_0183_PARSER_LIB_NAME} PRIVATE
                             ${PCAP_LIBRARIES} )
 LIST( APPEND PARSER_LIBS ${NMEA_0183_PARSER_LIB_NAME} )
 
+# ====== ====== ====== ====== User Interface Libraries ====== ====== ====== ======
 
-# ====== UI Library ======
-SET(UI_LIB_NAME "${BASE_NAME}-ui")
-SET(UI_SOURCES
-    ui/curses-input-handler.cpp
-    ui/curses-renderer.cpp
+# ====== Console Output Library ======
+SET(CONSOLE_UI_LIB_NAME "${BASE_NAME}-console-ui")
+SET(CONSOLE_UI_SOURCES
+    ui/console/renderer.cpp
+    ui/console/renderer.hpp
     ui/display-column.cpp
 )
-ADD_LIBRARY(${UI_LIB_NAME} STATIC ${UI_SOURCES})
-TARGET_LINK_LIBRARIES(${UI_LIB_NAME} PRIVATE
+ADD_LIBRARY(${CONSOLE_UI_LIB_NAME} STATIC ${CONSOLE_UI_SOURCES})
+TARGET_LINK_LIBRARIES(${CONSOLE_UI_LIB_NAME} PRIVATE
+                            ${SYSTEM_LIBS}
+                            ${CORE_LIB_NAME}
+                            )
+SET( CONSOLE_UI_LIBS ${CONSOLE_UI_LIB_NAME} )
+
+# ====== Curses TUI Library ======
+SET(CURSES_UI_LIB_NAME "${BASE_NAME}-curses-ui")
+SET(CURSES_UI_SOURCES
+    ui/curses/input-handler.cpp
+    ui/curses/input-handler.hpp
+    ui/curses/renderer.cpp
+    ui/curses/renderer.hpp
+    ui/display-column.cpp
+)
+ADD_LIBRARY(${CURSES_UI_LIB_NAME} STATIC ${CURSES_UI_SOURCES})
+TARGET_LINK_LIBRARIES(${CURSES_UI_LIB_NAME} PRIVATE
                             ${SYSTEM_LIBS}
                             ${CORE_LIB_NAME}
                             ${CURSES_LIBRARIES}
                             )
-SET( UI_LIBS ${UI_LIB_NAME} )
+SET( CURSES_UI_LIBS ${CURSES_UI_LIB_NAME} )
 
-
-# ====== Full Executable -- With UI ======
-SET(UI_EXE_NAME trackmon)
-SET(UI_EXE_SOURCES
-    track-monitor.cpp
-)
-
-ADD_EXECUTABLE(${UI_EXE_NAME} ${UI_EXE_SOURCES})
-TARGET_COMPILE_OPTIONS(${UI_EXE_NAME} PRIVATE ${UI_COMPILE_OPTIONS})
-TARGET_LINK_LIBRARIES(${UI_EXE_NAME} PRIVATE
-    ${CURSES_LIBRARIES}
-    # ${MOOS_LIBRARIES}
-    # ${MOOS_IVP_LIBRARIES}
-    ${READER_LIBS}
-    ${CORE_LIBS}
-    ${PARSER_LIBS}
-    ${UI_LIB_NAME}
-    ${SYSTEM_LIBS}
-    )
+# ====== ====== ====== ====== Executables ====== ====== ====== ======
 
 # ====== Partial Executable -- ingest only -- used for development ======
 SET(INGEST_EXE_NAME ingest)
@@ -129,16 +128,28 @@ SET(INGEST_EXE_SOURCES
     #track-monitor.cpp
 )
 ADD_EXECUTABLE(${INGEST_EXE_NAME} ${INGEST_EXE_SOURCES})
-TARGET_COMPILE_OPTIONS(${INGEST_EXE_NAME} PRIVATE ${COMPILE_OPTIONS})
+# TARGET_COMPILE_OPTIONS(${INGEST_EXE_NAME} PRIVATE ${COMPILE_OPTIONS})
 TARGET_LINK_LIBRARIES(${INGEST_EXE_NAME} PRIVATE
-    # ${CURSES_LIBRARIES}
-    # ${MOOS_LIBRARIES}
-    # ${MOOS_IVP_LIBRARIES}
-    # ${PROJ_LIBRARIES}
     ${READER_LIBS}
     ${CORE_LIBS}
     ${PARSER_LIBS}
-    ${UI_LIBS}
+    ${CONSOLE_UI_LIBS}
     ${SYSTEM_LIBS}
     )
 
+# ====== Full Executable -- With TUI ======
+SET(MONITOR_EXE_NAME trackmon)
+SET(MONITOR_EXE_SOURCES
+    track-monitor.cpp
+)
+
+ADD_EXECUTABLE(${MONITOR_EXE_NAME} ${MONITOR_EXE_SOURCES})
+# TARGET_COMPILE_OPTIONS(${MONITOR_EXE_NAME} PRIVATE ${COMPILE_OPTIONS})
+TARGET_LINK_LIBRARIES(${MONITOR_EXE_NAME} PRIVATE
+    ${CURSES_LIBRARIES}
+    ${READER_LIBS}
+    ${CORE_LIBS}
+    ${PARSER_LIBS}
+    ${CURSES_UI_LIB_NAME}
+    ${SYSTEM_LIBS}
+    )

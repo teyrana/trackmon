@@ -15,18 +15,13 @@
 // Project includes
 #include "core/track-cache.hpp"
 #include "readers/pcap/file-reader.hpp"
-#include "ui/curses-input-handler.hpp"
-#include "ui/curses-renderer.hpp"
-
-#ifdef ENABLE_AIS
 #include "parsers/ais/parser.hpp"
 #include "parsers/nmea0183/packet-parser.hpp"
-#endif
-
-#ifdef ENABLE_MOOS
 #include "parsers/moos/message-parser.hpp"
 #include "parsers/moos/packet-parser.hpp"
-#endif
+#include "ui/curses/input-handler.hpp"
+#include "ui/curses/renderer.hpp"
+
 
 const static std::string binary_name = "trackmon";
 const static std::string binary_version = "0.0.2";
@@ -180,7 +175,7 @@ int main(int argc, char *argv[]){
 
     // ===========================================================================================
     spdlog::info(">>> .D. Building UI: ");
-    CursesInputHandler handler(cache);
+    ui::curses::CursesInputHandler handler(cache);
     handler.update(true);
 
     // ===========================================================================================

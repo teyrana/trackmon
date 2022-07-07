@@ -1,12 +1,11 @@
 #pragma once
 
+#include <map>
 #include <string>
 
-using std::string;
+namespace ui {
 
-class DisplayColumn 
-{
-
+class DisplayColumn {
 public:
     DisplayColumn() = delete;
     DisplayColumn(  const std::string _key, 
@@ -19,5 +18,25 @@ public:
     const std::string title;
     const std::string format;
     size_t width;
-    
+
+
+public:
+    static const DisplayColumn* get( const std::string& k );
+
+public:
+    const static DisplayColumn ID;
+    const static DisplayColumn TIME;
+    const static DisplayColumn AGE;
+    const static DisplayColumn NAME;
+    const static DisplayColumn EASTING;
+    const static DisplayColumn NORTHING;
+    const static DisplayColumn LATITUDE;
+    const static DisplayColumn LONGITUDE;
+
+    // columns.emplace(? "Source", 
+
+    // static std::map<std::string,const DisplayColumn&> lookup;
 };
+
+
+}  // namespace ui
