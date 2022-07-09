@@ -103,11 +103,12 @@ Report* Parser::parse( const core::StringBuffer& source ) {
             export_.heading = msg18->true_heading;
             break;}
         case 24:{  // 24 - 'H' - Class B Static Data report
-            // Ignoring this message; we're not interested in this information.
             // spdlog::debug("            >> Processing:24:/B Static Data: [{}](#{})", msg->message_id, msg->mmsi );
-            // export_.id = msg->mmsi;
-            // const auto* msg24 = reinterpret_cast<libais::Ais24*>(msg.get());
-            return nullptr;}
+            export_.id = msg->mmsi;
+            const auto* msg24 = reinterpret_cast<libais::Ais24*>(msg.get());
+            // spdlog::debug("                ::(#{}): {}", msg->mmsi, msg24->name );
+            export_.name = msg24->name;
+            break;}
         case 27:{  // 27 - 'K' - Long-range position report - e.g. for satellite receivers
             export_.id = msg->mmsi;
             const auto* msg27 = reinterpret_cast<libais::Ais27*>(msg.get());
